@@ -1,4 +1,4 @@
-import type { BallotDefinition } from '@/lib/core/ballot';
+import { picksLabel, type BallotDefinition } from '@/lib/core/ballot';
 import type { TallyResult } from '@/lib/core/tally';
 import { units } from './Status';
 
@@ -30,6 +30,42 @@ export function Results({ definition, result }: { definition: BallotDefinition; 
                   <tr><td>Abstain</td><td className="r num">{units(ab)}</td><td className="r num muted">not counted</td><td className="r num">{r.ballots.abstain}</td></tr>
                 </tbody>
               </table>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  if (definition.type === 'agenda' && result.agenda) {
+    return (
+      <div className="stack">
+        {result.agenda.map((it, i) => {
+          const d = definition.items.find((x) => x.id === it.id);
+          const top = it.options.reduce((m, o) => (BigInt(o.votes) > m ? BigInt(o.votes) : m), 0n);
+          const sorted = [...it.options].sort((x, y) => (BigInt(y.votes) > BigInt(x.votes) ? 1 : BigInt(y.votes) < BigInt(x.votes) ? -1 : 0));
+          return (
+            <div key={it.id} className="item" style={{ background: '#fff' }}>
+              <div className="item-head" style={{ alignItems: 'flex-start' }}>
+                <div>
+                  <div className="small muted">Item {i + 1} · {d ? picksLabel(d.minChoices, d.maxChoices) : ''} · top {it.seats} {it.seats === 1 ? 'wins' : 'win'}</div>
+                  <strong>{it.title}</strong>
+                </div>
+              </div>
+              {it.tiedAtCutoff && <div className="notice warn">There is a tie for the last winning place. The rules do not break ties automatically.</div>}
+              <table>
+                <thead><tr><th>Option</th><th className="r">Votes</th><th className="r">Voters</th></tr></thead>
+                <tbody>
+                  {sorted.map((o) => (
+                    <tr key={o.id}>
+                      <td>{o.name} {it.selected.includes(o.id) && <span className="badge open" style={{ marginLeft: 6 }}>{it.seats === 1 ? 'Winner' : 'Elected'}</span>}
+                        <div className="meter" aria-hidden="true" style={{ marginTop: 6 }}><span style={{ width: `${pct(BigInt(o.votes), top)}%` }} /></div></td>
+                      <td className="r num">{units(o.votes)}</td>
+                      <td className="r num">{o.ballots}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {it.blankBallots > 0 && <p className="small muted" style={{ marginBottom: 0 }}>{it.blankBallots} {it.blankBallots === 1 ? 'voter' : 'voters'} chose no option on this item.</p>}
             </div>
           );
         })}

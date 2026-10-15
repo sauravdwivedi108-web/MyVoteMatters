@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { withTenant, audit } from './db';
-import { BallotDefinition, validateChoices } from './ballot';
+import { BallotDefinition, splitPicks, validateChoices } from './ballot';
 import { canonicalJson, decryptBallot, sha256Hex } from './crypto';
 import { DomainError } from './elections';
 
@@ -11,6 +11,14 @@ type ResolutionResult = {
   passed: boolean;
 };
 type CandidateResult = { id: string; name: string; votes: string };
+export type AgendaItemResult = {
+  id: string; title: string; seats: number;
+  options: { id: string; name: string; votes: string; ballots: number }[];
+  /** Options in the top `seats` places. Empty when a tie straddles the cut-off. */
+  selected: string[];
+  tiedAtCutoff: boolean;
+  blankBallots: number;
+};
 
 export type TallyResult = {
   electionId: string;
@@ -21,6 +29,7 @@ export type TallyResult = {
   resolutions?: ResolutionResult[];
   candidates?: CandidateResult[];
   winner?: string | null;
+  agenda?: AgendaItemResult[];
 };
 
 /**
@@ -57,7 +66,14 @@ export async function tallyElection(tallyPool: pg.Pool, orgId: string, actor: st
 
     const resTotals = new Map<string, { units: Record<string, bigint>; ballots: Record<string, number> }>();
     const candTotals = new Map<string, bigint>();
-    if (definition.type === 'resolutions') {
+    const agendaTotals = new Map<string, { units: Map<string, bigint>; ballots: Map<string, number>; blank: number }>();
+    if (definition.type === 'agenda') {
+      for (const it of definition.items) {
+        agendaTotals.set(it.id, {
+          units: new Map(it.options.map((o) => [o.id, 0n])), ballots: new Map(it.options.map((o) => [o.id, 0])), blank: 0,
+        });
+      }
+    } else if (definition.type === 'resolutions') {
       for (const r of definition.resolutions) {
         resTotals.set(r.id, { units: { for: 0n, against: 0n, abstain: 0n }, ballots: { for: 0, against: 0, abstain: 0 } });
       }
@@ -80,6 +96,17 @@ export async function tallyElection(tallyPool: pg.Pool, orgId: string, actor: st
           const tot = resTotals.get(id)!;
           tot.units[choice] += units;
           tot.ballots[choice] += 1;
+        }
+      } else if (definition.type === 'agenda') {
+        // Each chosen option receives the voter's full voting units.
+        for (const [id, v] of Object.entries(ballot.choices as Record<string, string>)) {
+          const tot = agendaTotals.get(id)!;
+          const picks = splitPicks(v);
+          if (!picks.length) tot.blank += 1;
+          for (const p of picks) {
+            tot.units.set(p, tot.units.get(p)! + units);
+            tot.ballots.set(p, tot.ballots.get(p)! + 1);
+          }
         }
       } else {
         // Weighted by voting units; a one-person-one-vote poll imports 1 unit each.
@@ -108,6 +135,22 @@ export async function tallyElection(tallyPool: pg.Pool, orgId: string, actor: st
           units: { for: tot.units.for.toString(), against: tot.units.against.toString(), abstain: tot.units.abstain.toString() },
           ballots: { for: tot.ballots.for, against: tot.ballots.against, abstain: tot.ballots.abstain },
           passed: passes(r.majority, tot.units.for, tot.units.against),
+        };
+      });
+    } else if (definition.type === 'agenda') {
+      result.agenda = definition.items.map((it) => {
+        const tot = agendaTotals.get(it.id)!;
+        const options = it.options.map((o) => ({
+          id: o.id, name: o.name, votes: tot.units.get(o.id)!.toString(), ballots: tot.ballots.get(o.id)!,
+        }));
+        const sorted = [...options].sort((a, b) => (BigInt(b.votes) > BigInt(a.votes) ? 1 : BigInt(b.votes) < BigInt(a.votes) ? -1 : 0));
+        const seats = it.maxChoices;
+        // A tie across the last place is reported, never broken silently.
+        const tiedAtCutoff = sorted.length > seats && sorted[seats - 1].votes === sorted[seats].votes;
+        return {
+          id: it.id, title: it.title, seats, options,
+          selected: tiedAtCutoff ? [] : sorted.slice(0, seats).filter((o) => BigInt(o.votes) > 0n).map((o) => o.id),
+          tiedAtCutoff, blankBallots: tot.blank,
         };
       });
     } else {

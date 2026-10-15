@@ -265,6 +265,52 @@ test('board election: single choice, weighted, ties are reported not broken', as
   assert.equal(result.winner, null);
 });
 
+test('board agenda: admin sets how many picks, each pick carries the voter\'s units, ties at the cut-off are reported', async () => {
+  const org = await seedOrg(h.admin, 'agenda');
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'Board 2026', kind: 'board_election', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000),
+  });
+  await importRoll(h.app, org.orgId, org.maker, electionId,
+    [{ eligibilityRef: 'A', votingUnits: 100 }, { eligibilityRef: 'B', votingUnits: 40 }, { eligibilityRef: 'C', votingUnits: 5 }]);
+  const def: BallotDefinition = { type: 'agenda', items: [
+    { id: 'A1', title: 'Directors', description: '', minChoices: 1, maxChoices: 2,
+      options: [{ id: 'O1', name: 'Asha' }, { id: 'O2', name: 'Ravi' }, { id: 'O3', name: 'Meera' }] },
+    { id: 'A2', title: 'Chair', description: '', minChoices: 0, maxChoices: 1,
+      options: [{ id: 'O1', name: 'Asha' }, { id: 'O2', name: 'Ravi' }] },
+  ] };
+  await assert.rejects(setBallotDefinition(h.app, org.orgId, org.maker, electionId,
+    { type: 'agenda', items: [{ ...def.items[0], maxChoices: 4 }] }), /picks must be between/);
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, def);
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  const { tallyPrivateKeyPem } = await approveElection(h.app, org.orgId, org.checker, electionId);
+  const creds = Object.fromEntries((await issueCredentials(h.app, org.orgId, org.maker, electionId)).map((c) => [c.eligibilityRef, c.secret]));
+  await transition(h.app, org.orgId, org.maker, electionId, 'open');
+  const cast = (ref: string, choices: Record<string, string>) => castVote(h.app, org.orgId, { electionId, credentialSecret: creds[ref], choices });
+
+  // Too many picks, an unknown option, a missing item and too few picks are all refused.
+  assert.equal((await cast('A', { A1: 'O1,O2,O3', A2: '' })).status, 'rejected');
+  assert.equal((await cast('A', { A1: 'O9', A2: '' })).status, 'rejected');
+  assert.equal((await cast('A', { A1: 'O1' })).status, 'rejected');
+  assert.equal((await cast('A', { A1: '', A2: '' })).status, 'rejected');
+
+  // Picks in any order are the same vote, so a retry in a different order is a replay, not a conflict.
+  const a = await cast('A', { A1: 'O2,O1', A2: 'O1' });
+  const again = await cast('A', { A1: 'O1,O2', A2: 'O1' });
+  assert.equal(a.status, 'accepted'); assert.equal(again.status, 'accepted');
+  assert.equal((again as { replayed: boolean }).replayed, true);
+  assert.equal((await cast('B', { A1: 'O3', A2: '' })).status, 'accepted');
+  assert.equal((await cast('C', { A1: 'O3', A2: 'O2' })).status, 'accepted');
+
+  await transition(h.app, org.orgId, org.maker, electionId, 'closed');
+  const r = await tallyElection(h.tally, org.orgId, 'svc:tally', electionId, tallyPrivateKeyPem);
+  const [dir, chair] = r.agenda!;
+  assert.deepEqual(dir.options.map((o) => [o.id, o.votes, o.ballots]), [['O1', '100', 1], ['O2', '100', 1], ['O3', '45', 2]]);
+  assert.equal(dir.tiedAtCutoff, false);
+  assert.deepEqual(dir.selected, ['O1', 'O2']);
+  assert.deepEqual(chair.selected, ['O1']);
+  assert.equal(chair.blankBallots, 1);
+});
+
 test('roll import reports bad rows instead of guessing', async () => {
   const org = await seedOrg(h.admin, 'import');
   const electionId = await createElection(h.app, org.orgId, org.maker, {

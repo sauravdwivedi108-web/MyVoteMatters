@@ -65,7 +65,7 @@ code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monosp
 
 label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
 .hint { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
-input[type=text], input[type=email], input[type=password], input[type=datetime-local], input[type=date],
+input[type=text], input[type=number], input[type=email], input[type=password], input[type=datetime-local], input[type=date],
 select, textarea {
   width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong);
   border-radius: 10px; font: 400 0.95rem var(--font); color: var(--text); background: #fff;
@@ -242,3 +242,15 @@ details.manage summary { cursor: pointer; color: var(--violet-strong); font-weig
 .manage-row select, .manage-row input { flex: 1 1 160px; min-width: 0; width: auto; }
 .manage-row label { flex-basis: 100%; margin: 0; }
 .row-remove { background: none; border: 0; color: var(--red); cursor: pointer; padding: 2px 4px; }
+
+/* Agenda builder */
+.opt-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.opt-row input { width: 100%; min-width: 0; }
+@media (max-width: 620px) {
+  .opt-row { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .opt-row input + input { grid-column: 2; grid-row: 2; }
+}
+.opt-n { width: 18px; text-align: right; }
+.opt-rule { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .opt-rule { grid-template-columns: 1fr; } }
+.choice.disabled { opacity: 0.5; cursor: not-allowed; }

@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { withTenant } from './db';
-import { BallotDefinition, Choices, validateChoices } from './ballot';
+import { BallotDefinition, Choices, normalizeChoices, validateChoices } from './ballot';
 import { canonicalJson, credentialDerivations, credentialHash, encryptBallot, receiptCommitment, sha256Hex } from './crypto';
 
 export type CastOutcome =
@@ -28,6 +28,7 @@ export async function castVote(pool: pg.Pool, orgId: string, input: {
         WHERE d.election_id = $1 AND d.published_at IS NOT NULL`, [input.electionId]);
     if (!ballot) return { status: 'rejected', reason: 'voting_closed' };
 
+    input = { ...input, choices: normalizeChoices(ballot.definition as BallotDefinition, input.choices) };
     const problem = validateChoices(ballot.definition as BallotDefinition, input.choices);
     if (problem) return { status: 'rejected', reason: `invalid_ballot: ${problem}` };
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { BallotDefinition, Choices } from '@/lib/core/ballot';
+import { picksLabel, splitPicks, type BallotDefinition, type Choices } from '@/lib/core/ballot';
 import { Brand } from '@/components/Brand';
 import { CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
 
@@ -31,15 +31,34 @@ export function VoterApp() {
         if (!r.ok) throw new Error(r.status === 429 ? 'Too many attempts. Wait a minute and reload.' : 'This voting link is not valid. Check you opened the full link.');
         return r.json();
       })
-      .then((b: Ballot) => { setBallot(b); setStage('ballot'); })
+      .then((b: Ballot) => {
+        // Agenda items start with no picks, which is a complete answer only where the minimum is zero.
+        if (b.definition?.type === 'agenda') setChoices(Object.fromEntries(b.definition.items.map((it) => [it.id, ''])));
+        setBallot(b); setStage('ballot');
+      })
       .catch((e) => setError(e.message));
   }, []);
 
-  const items = ballot?.definition?.type === 'resolutions' ? ballot.definition.resolutions : [];
-  const complete = ballot?.definition?.type === 'resolutions'
-    ? items.every((r) => choices[r.id]) : Boolean(choices.candidate);
-  const answered = ballot?.definition?.type === 'resolutions' ? items.filter((r) => choices[r.id]).length : choices.candidate ? 1 : 0;
-  const total = ballot?.definition?.type === 'resolutions' ? items.length : 1;
+  const d0 = ballot?.definition;
+  const okItem = (id: string, min: number, max: number) => {
+    const n = splitPicks(choices[id] ?? '').length;
+    return id in choices && n >= min && n <= max;
+  };
+  const answeredIds = !d0 ? [] : d0.type === 'resolutions' ? d0.resolutions.filter((r) => choices[r.id]).map((r) => r.id)
+    : d0.type === 'agenda' ? d0.items.filter((it) => okItem(it.id, it.minChoices, it.maxChoices)).map((it) => it.id)
+    : choices.candidate ? ['candidate'] : [];
+  const total = !d0 ? 1 : d0.type === 'resolutions' ? d0.resolutions.length : d0.type === 'agenda' ? d0.items.length : 1;
+  const answered = answeredIds.length;
+  const complete = answered === total;
+
+  /** Toggles an agenda option, keeping picks in ballot order. Picking in a one-choice item replaces the previous pick. */
+  function toggle(itemId: string, optionId: string, order: string[], max: number) {
+    const cur = splitPicks(choices[itemId] ?? '');
+    let next = cur.includes(optionId) ? cur.filter((x) => x !== optionId) : max === 1 ? [optionId] : [...cur, optionId];
+    if (next.length > max) return;
+    next = next.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    setChoices({ ...choices, [itemId]: next.join(',') });
+  }
 
   async function submit() {
     setStage('sending');
@@ -128,6 +147,20 @@ export function VoterApp() {
                 ))}
               </tbody>
             </table>
+          ) : def.type === 'agenda' ? (
+            <table>
+              <tbody>
+                {def.items.map((it, i) => {
+                  const picks = splitPicks(choices[it.id] ?? '');
+                  return (
+                    <tr key={it.id}><td><span className="small muted">Item {i + 1}</span><br />{it.title}</td>
+                      <td className="r">{picks.length
+                        ? picks.map((p) => <div key={p}><strong>{it.options.find((o) => o.id === p)?.name}</strong></div>)
+                        : <span className="muted">No choice</span>}</td></tr>
+                  );
+                })}
+              </tbody>
+            </table>
           ) : (
             <p>{def.question}<br /><strong>{def.candidates.find((c) => c.id === choices.candidate)?.name}</strong></p>
           )}
@@ -162,7 +195,34 @@ export function VoterApp() {
             ))}
           </fieldset>
         </div>
-      )) : (
+      )) : def.type === 'agenda' ? def.items.map((it, i) => {
+        const picks = splitPicks(choices[it.id] ?? '');
+        const order = it.options.map((o) => o.id);
+        const full = picks.length >= it.maxChoices;
+        const single = it.maxChoices === 1;
+        return (
+          <div className="question" key={it.id}>
+            <fieldset>
+              <legend>Item {i + 1}: {it.title}</legend>
+              {it.description && <p style={{ whiteSpace: 'pre-wrap' }}>{it.description}</p>}
+              <p className="small muted" aria-live="polite">
+                <strong>{picksLabel(it.minChoices, it.maxChoices)}</strong>{!single && <> · {picks.length} of {it.maxChoices} chosen</>}
+              </p>
+              {it.options.map((o) => {
+                const on = picks.includes(o.id);
+                const blocked = !on && full && !single;
+                return (
+                  <label key={o.id} className={`choice${on ? ' selected' : ''}${blocked ? ' disabled' : ''}`}>
+                    <input type={single ? 'radio' : 'checkbox'} name={it.id} value={o.id} checked={on} disabled={blocked}
+                      onChange={() => toggle(it.id, o.id, order, it.maxChoices)} />
+                    <span>{o.name}{o.detail && <span className="small muted" style={{ display: 'block' }}>{o.detail}</span>}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          </div>
+        );
+      }) : (
         <div className="question">
           <fieldset>
             <legend>{def.question}</legend>
@@ -178,7 +238,7 @@ export function VoterApp() {
       )}
       <p className="small muted" aria-live="polite">{answered} of {total} answered</p>
       <button className="btn block" disabled={!complete} onClick={() => { setStage('review'); window.scrollTo(0, 0); }}>
-        {complete ? 'Review my vote' : 'Answer every item to continue'}
+        {complete ? 'Review my vote' : def.type === 'agenda' ? 'Make the required choices to continue' : 'Answer every item to continue'}
       </button>
     </>,
   );

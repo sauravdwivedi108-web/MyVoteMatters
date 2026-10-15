@@ -9,6 +9,7 @@ import {
 import { StatusBadge, kindLabel, ist, units } from '@/components/Status';
 import { ActionForm, ActionButton, Submit } from '@/components/forms';
 import { BallotBuilder } from '@/components/BallotBuilder';
+import { picksLabel } from '@/lib/core/ballot';
 import { ApprovePanel, InvitePanel } from '@/components/Panels';
 import { Results, Reconciliation } from '@/components/Results';
 import {
@@ -220,6 +221,15 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
                 <ol style={{ paddingLeft: 18, margin: 0 }}>
                   {e.ballot.definition.resolutions.map((r) => (
                     <li key={r.id} style={{ marginBottom: 10 }}><strong>{r.title}</strong> <span className="small muted">({r.majority})</span><div className="small muted">{r.text}</div></li>
+                  ))}
+                </ol>
+              ) : e.ballot.definition.type === 'agenda' ? (
+                <ol style={{ paddingLeft: 18, margin: 0 }}>
+                  {e.ballot.definition.items.map((it) => (
+                    <li key={it.id} style={{ marginBottom: 12 }}><strong>{it.title}</strong> <span className="small muted">({picksLabel(it.minChoices, it.maxChoices)})</span>
+                      {it.description && <div className="small muted">{it.description}</div>}
+                      <ul className="small">{it.options.map((o) => <li key={o.id}>{o.name}{o.detail ? <span className="muted"> · {o.detail}</span> : null}</li>)}</ul>
+                    </li>
                   ))}
                 </ol>
               ) : (

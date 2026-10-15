@@ -2,11 +2,24 @@
 
 import { useActionState, useState } from 'react';
 import type { FormState } from '@/lib/actions';
-import type { BallotDefinition } from '@/lib/core/ballot';
+import { picksLabel, type BallotDefinition } from '@/lib/core/ballot';
 import { Notice, Submit } from './forms';
 
 type Res = { id: string; title: string; text: string; majority: 'ordinary' | 'special' };
-type Cand = { id: string; name: string };
+type Opt = { name: string; detail: string };
+type Item = { title: string; description: string; options: Opt[]; minChoices: number; maxChoices: number };
+
+const blankItem = (): Item => ({ title: '', description: '', options: [{ name: '', detail: '' }, { name: '', detail: '' }], minChoices: 1, maxChoices: 1 });
+
+function initialItems(initial: BallotDefinition | null): Item[] {
+  if (initial?.type === 'agenda') {
+    return initial.items.map((it) => ({ ...it, options: it.options.map((o) => ({ name: o.name, detail: o.detail ?? '' })) }));
+  }
+  if (initial?.type === 'single_choice') {
+    return [{ title: initial.question, description: '', options: initial.candidates.map((c) => ({ name: c.name, detail: '' })), minChoices: 1, maxChoices: 1 }];
+  }
+  return [blankItem()];
+}
 
 export function BallotBuilder({ kind, initial, action }: {
   kind: string; initial: BallotDefinition | null; action: (s: FormState, fd: FormData) => Promise<FormState>;
@@ -15,13 +28,29 @@ export function BallotBuilder({ kind, initial, action }: {
   const isRes = kind === 'agm_resolutions';
   const [resolutions, setRes] = useState<Res[]>(
     initial?.type === 'resolutions' ? initial.resolutions : [{ id: 'R1', title: '', text: '', majority: 'ordinary' }]);
-  const [question, setQuestion] = useState(initial?.type === 'single_choice' ? initial.question : '');
-  const [cands, setCands] = useState<Cand[]>(
-    initial?.type === 'single_choice' ? initial.candidates : [{ id: 'C1', name: '' }, { id: 'C2', name: '' }]);
+  const [items, setItems] = useState<Item[]>(() => initialItems(initial));
 
   const def: BallotDefinition = isRes
     ? { type: 'resolutions', resolutions: resolutions.map((r, i) => ({ ...r, id: `R${i + 1}`, title: r.title.trim(), text: r.text.trim() })) }
-    : { type: 'single_choice', question: question.trim(), candidates: cands.map((c, i) => ({ id: `C${i + 1}`, name: c.name.trim() })) };
+    : {
+        type: 'agenda',
+        items: items.map((it, i) => ({
+          id: `A${i + 1}`, title: it.title.trim(), description: it.description.trim(),
+          options: it.options.map((o, j) => ({ id: `O${j + 1}`, name: o.name.trim(), ...(o.detail.trim() ? { detail: o.detail.trim() } : {}) })),
+          minChoices: it.minChoices, maxChoices: it.maxChoices,
+        })),
+      };
+
+  const updItem = (i: number, patch: Partial<Item>) => setItems(items.map((it, j) => {
+    if (j !== i) return it;
+    const next = { ...it, ...patch };
+    // Keep the pick rule valid as options are added or removed.
+    next.maxChoices = Math.max(1, Math.min(next.maxChoices, next.options.length));
+    next.minChoices = Math.max(0, Math.min(next.minChoices, next.maxChoices));
+    return next;
+  }));
+  const updOpt = (i: number, j: number, patch: Partial<Opt>) =>
+    updItem(i, { options: items[i].options.map((o, k) => (k === j ? { ...o, ...patch } : o)) });
 
   const updRes = (i: number, patch: Partial<Res>) => setRes(resolutions.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
@@ -59,18 +88,58 @@ export function BallotBuilder({ kind, initial, action }: {
         </>
       ) : (
         <>
-          <div className="field"><label htmlFor="q">Question</label>
-            <input id="q" type="text" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Who should chair the board?" required /></div>
-          {cands.map((c, i) => (
-            <div className="field" key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
-                <label htmlFor={`c${i}`}>Option {i + 1}</label>
-                <input id={`c${i}`} type="text" value={c.name} onChange={(e) => setCands(cands.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} required />
+          <p className="small muted" style={{ marginTop: 0 }}>
+            Add an agenda item for each decision, for example each board position. For every item you decide the options and how many of them a voter may pick.
+          </p>
+          {items.map((it, i) => (
+            <div className="item" key={i}>
+              <div className="item-head">
+                <strong>Agenda item {i + 1}</strong>
+                {items.length > 1 && (
+                  <button type="button" className="btn ghost small" onClick={() => setItems(items.filter((_, j) => j !== i))}>Remove item</button>
+                )}
               </div>
-              {cands.length > 2 && <button type="button" className="btn ghost small" onClick={() => setCands(cands.filter((_, j) => j !== i))}>Remove</button>}
+              <div className="field"><label htmlFor={`at${i}`}>Title</label>
+                <input id={`at${i}`} type="text" value={it.title} onChange={(e) => updItem(i, { title: e.target.value })}
+                  placeholder="Election of independent directors" required /></div>
+              <div className="field"><label htmlFor={`ad${i}`}>Description <span className="hint">optional</span></label>
+                <textarea id={`ad${i}`} value={it.description} onChange={(e) => updItem(i, { description: e.target.value })} style={{ minHeight: 60 }}
+                  placeholder="Three seats are open. Choose up to three candidates." /></div>
+              <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 12px' }}>
+                <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Options</legend>
+                {it.options.map((o, j) => (
+                  <div key={j} className="opt-row">
+                    <span className="small muted opt-n">{j + 1}</span>
+                    <input aria-label={`Option ${j + 1} name`} id={`ao${i}-${j}`} type="text" value={o.name}
+                      onChange={(e) => updOpt(i, j, { name: e.target.value })} placeholder="Name" required />
+                    <input aria-label={`Option ${j + 1} detail`} type="text" value={o.detail}
+                      onChange={(e) => updOpt(i, j, { detail: e.target.value })} placeholder="Detail, e.g. DIN (optional)" />
+                    {it.options.length > 2 && (
+                      <button type="button" className="btn ghost small" aria-label={`Remove option ${j + 1}`}
+                        onClick={() => updItem(i, { options: it.options.filter((_, k) => k !== j) })}>Remove</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="btn secondary small" onClick={() => updItem(i, { options: [...it.options, { name: '', detail: '' }] })}>+ Add option</button>
+              </fieldset>
+              <div className="opt-rule">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor={`amax${i}`}>Most a voter can pick</label>
+                  <input id={`amax${i}`} type="number" min={1} max={it.options.length} value={it.maxChoices}
+                    onChange={(e) => updItem(i, { maxChoices: Number(e.target.value) || 1 })} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor={`amin${i}`}>Fewest a voter must pick</label>
+                  <input id={`amin${i}`} type="number" min={0} max={it.maxChoices} value={it.minChoices}
+                    onChange={(e) => updItem(i, { minChoices: Number(e.target.value) || 0 })} />
+                </div>
+              </div>
+              <p className="small muted" style={{ margin: '8px 0 0' }}>
+                Voters see: <strong>{picksLabel(it.minChoices, it.maxChoices)}</strong>. The top {it.maxChoices} {it.maxChoices === 1 ? 'option wins' : 'options win'}.
+              </p>
             </div>
           ))}
-          <button type="button" className="btn secondary small" onClick={() => setCands([...cands, { id: '', name: '' }])}>+ Add option</button>
+          <button type="button" className="btn secondary small" onClick={() => setItems([...items, blankItem()])}>+ Add agenda item</button>
         </>
       )}
       <div style={{ marginTop: 18 }}><Submit pendingText="Saving…">Save ballot</Submit></div>

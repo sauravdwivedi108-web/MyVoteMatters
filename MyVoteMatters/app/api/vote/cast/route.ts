@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     if (r.status === 'accepted') {
       return NextResponse.json({ receipt: r.receiptCode, replayed: r.replayed }, { headers: { 'Cache-Control': 'no-store' } });
     }
-    const reason = r.reason.startsWith('invalid_ballot') ? 'Please answer every item on the ballot.' : REASONS[r.reason] ?? 'Your vote could not be accepted.';
+    const reason = r.reason.startsWith('invalid_ballot') ? 'Please make the required choices on every item of the ballot.' : REASONS[r.reason] ?? 'Your vote could not be accepted.';
     return NextResponse.json({ error: reason }, { status: 409 });
   } catch (err) {
     console.error('cast failed', (err as Error).message); // never log the request body
