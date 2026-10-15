@@ -41,25 +41,30 @@ export function Results({ definition, result }: { definition: BallotDefinition; 
       <div className="stack">
         {result.agenda.map((it, i) => {
           const d = definition.items.find((x) => x.id === it.id);
+          const all = result.unitsEligible ? BigInt(result.unitsEligible) : null;
           const top = it.options.reduce((m, o) => (BigInt(o.votes) > m ? BigInt(o.votes) : m), 0n);
           const sorted = [...it.options].sort((x, y) => (BigInt(y.votes) > BigInt(x.votes) ? 1 : BigInt(y.votes) < BigInt(x.votes) ? -1 : 0));
           return (
             <div key={it.id} className="item" style={{ background: '#fff' }}>
               <div className="item-head" style={{ alignItems: 'flex-start' }}>
                 <div>
-                  <div className="small muted">Item {i + 1} · {d ? picksLabel(d.minChoices, d.maxChoices) : ''} · top {it.seats} {it.seats === 1 ? 'wins' : 'win'}</div>
+                  <div className="small muted">Item {i + 1} · {d ? picksLabel(d.minChoices, d.maxChoices) : ''} · {it.thresholdPct !== undefined
+                    ? `needs ${it.thresholdPct}% of total voting share` : `top ${it.seats} ${it.seats === 1 ? 'wins' : 'win'}`}</div>
                   <strong>{it.title}</strong>
                 </div>
               </div>
+              {it.thresholdPct !== undefined && !it.selected.length && !it.tiedAtCutoff && <div className="notice warn">No option reached {it.thresholdPct}% of the total voting share.</div>}
               {it.tiedAtCutoff && <div className="notice warn">There is a tie for the last winning place. The rules do not break ties automatically.</div>}
               <table>
-                <thead><tr><th>Option</th><th className="r">Votes</th><th className="r">Voters</th></tr></thead>
+                <thead><tr><th>Option</th><th className="r">Votes</th>{all !== null && <th className="r">% of total voting share</th>}<th className="r">% of votes cast</th><th className="r">Voters</th></tr></thead>
                 <tbody>
                   {sorted.map((o) => (
                     <tr key={o.id}>
-                      <td>{o.name} {it.selected.includes(o.id) && <span className="badge open" style={{ marginLeft: 6 }}>{it.seats === 1 ? 'Winner' : 'Elected'}</span>}
+                      <td>{o.name} {it.selected.includes(o.id) && <span className="badge open" style={{ marginLeft: 6 }}>{it.thresholdPct !== undefined ? 'Approved' : it.seats === 1 ? 'Winner' : 'Elected'}</span>}
                         <div className="meter" aria-hidden="true" style={{ marginTop: 6 }}><span style={{ width: `${pct(BigInt(o.votes), top)}%` }} /></div></td>
                       <td className="r num">{units(o.votes)}</td>
+                      {all !== null && <td className="r num"><strong>{pct(BigInt(o.votes), all)}%</strong></td>}
+                      <td className="r num">{pct(BigInt(o.votes), BigInt(result.reconciliation.unitsInBallots))}%</td>
                       <td className="r num">{o.ballots}</td>
                     </tr>
                   ))}

@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { picksLabel, splitPicks, type BallotDefinition, type Choices } from '@/lib/core/ballot';
 import { Brand } from '@/components/Brand';
-import { CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
+import { Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
 
 type Ballot = {
   title: string; org_name: string; status: string; starts_at: string; ends_at: string;
   version: number | null; definition: BallotDefinition | null; already_voted: boolean; voting_units: string; kind: string;
+  voter_name?: string; units_total?: string;
 };
+
+/** Share of the total voting weight, e.g. "12.34%". */
+const sharePct = (part: string, total: string) => total === '0' ? '0%' : `${(Number((BigInt(part) * 1000000n) / BigInt(total)) / 10000).toFixed(2)}%`;
 
 const OPTIONS = [['for', 'For', ThumbsUp], ['against', 'Against', ThumbsDown], ['abstain', 'Abstain', MinusCircle]] as const;
 const fmt = (d: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(d)) + ' IST';
@@ -21,6 +25,7 @@ export function VoterApp() {
   const [choices, setChoices] = useState<Choices>({});
   const [stage, setStage] = useState<'loading' | 'ballot' | 'review' | 'sending' | 'done'>('loading');
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     const t = decodeURIComponent(window.location.hash.slice(1));
@@ -80,7 +85,10 @@ export function VoterApp() {
   const shell = (body: React.ReactNode) => (
     <div className="voter">
       <div className="voter-top"><Brand href="/vote" />{ballot && <span className="small muted">{ballot.org_name}</span>}</div>
-      {ballot && <p className="small muted h-icon" style={{ gap: 6, marginTop: -8 }}><Lock size={14} aria-hidden="true" /> Secret ballot: nobody, including the company, can see how you vote.</p>}
+      {ballot && (ballot.kind === 'creditor_vote'
+        ? <div className="notice warn small h-icon" style={{ marginTop: -8 }}><Eye size={16} aria-hidden="true" /> Open ballot: your name and your choices are recorded and shown to the administrator (resolution professional) after voting closes.</div>
+        : <p className="small muted h-icon" style={{ gap: 6, marginTop: -8 }}><Lock size={14} aria-hidden="true" /> Secret ballot: nobody, including the company, can see how you vote.</p>)}
+      {ballot?.voter_name && <p className="small" style={{ marginTop: 0 }}>Voting as <strong>{ballot.voter_name}</strong>{ballot.units_total && <> · {sharePct(ballot.voting_units, ballot.units_total)} of total voting share</>}</p>}
       {body}
     </div>
   );
@@ -98,7 +106,9 @@ export function VoterApp() {
         <p>Your receipt code:</p>
         <div className="receipt" aria-label="Receipt code">{receipt}</div>
         <p className="small muted" style={{ marginTop: 12 }}>
-          Keep this code. It proves your ballot was accepted. It does not show how you voted, and nobody can use it to find out.
+          {ballot.kind === 'creditor_vote'
+            ? 'Keep this code. It proves your vote was accepted. Your choices are recorded under your name for the administrator.'
+            : 'Keep this code. It proves your ballot was accepted. It does not show how you voted, and nobody can use it to find out.'}
         </p>
         <Link className="btn secondary" href={verify}><Receipt size={16} aria-hidden="true" /> Check my receipt</Link>
       </div>,
@@ -164,7 +174,9 @@ export function VoterApp() {
           ) : (
             <p>{def.question}<br /><strong>{def.candidates.find((c) => c.id === choices.candidate)?.name}</strong></p>
           )}
-          {ballot.kind !== 'internal_poll' && <p className="small muted" style={{ marginTop: 12 }}>Cast with {BigInt(ballot.voting_units).toLocaleString('en-IN')} voting units.</p>}
+          {ballot.kind !== 'internal_poll' && <p className="small muted" style={{ marginTop: 12 }}>{ballot.units_total
+            ? <>Cast with {sharePct(ballot.voting_units, ballot.units_total)} of the total voting share.</>
+            : <>Cast with {BigInt(ballot.voting_units).toLocaleString('en-IN')} voting units.</>}</p>}
         </div>
         <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
           <button className="btn block" onClick={submit} disabled={stage === 'sending'}>{stage === 'sending' ? 'Recording your vote…' : <><Send size={18} aria-hidden="true" /> Confirm and cast my vote</>}</button>
@@ -178,7 +190,7 @@ export function VoterApp() {
     <>
       <div className="progress" aria-hidden="true"><span className="on" /><span /><span /></div>
       <h1>{ballot.title}</h1>
-      <p className="muted">Voting closes {fmt(ballot.ends_at)}.{ballot.kind !== 'internal_poll' && <> You hold {BigInt(ballot.voting_units).toLocaleString('en-IN')} voting units.</>}</p>
+      <p className="muted">Voting closes {fmt(ballot.ends_at)}.{ballot.kind !== 'internal_poll' && ballot.kind !== 'creditor_vote' && <> You hold {BigInt(ballot.voting_units).toLocaleString('en-IN')} voting units.</>}</p>
       {def.type === 'resolutions' ? def.resolutions.map((r, i) => (
         <div className="question" key={r.id}>
           <fieldset>
@@ -195,7 +207,8 @@ export function VoterApp() {
             ))}
           </fieldset>
         </div>
-      )) : def.type === 'agenda' ? def.items.map((it, i) => {
+      )) : def.type === 'agenda' ? def.items.filter((_, i) => i === step).map((it) => {
+        const i = step;
         const picks = splitPicks(choices[it.id] ?? '');
         const order = it.options.map((o) => o.id);
         const full = picks.length >= it.maxChoices;
@@ -203,7 +216,8 @@ export function VoterApp() {
         return (
           <div className="question" key={it.id}>
             <fieldset>
-              <legend>Item {i + 1}: {it.title}</legend>
+              <div className="small muted" style={{ marginBottom: 4 }}>Item {i + 1} of {def.items.length}</div>
+              <legend>{it.title}</legend>
               {it.description && <p style={{ whiteSpace: 'pre-wrap' }}>{it.description}</p>}
               <p className="small muted" aria-live="polite">
                 <strong>{picksLabel(it.minChoices, it.maxChoices)}</strong>{!single && <> · {picks.length} of {it.maxChoices} chosen</>}
@@ -215,7 +229,7 @@ export function VoterApp() {
                   <label key={o.id} className={`choice${on ? ' selected' : ''}${blocked ? ' disabled' : ''}`}>
                     <input type={single ? 'radio' : 'checkbox'} name={it.id} value={o.id} checked={on} disabled={blocked}
                       onChange={() => toggle(it.id, o.id, order, it.maxChoices)} />
-                    <span>{o.name}{o.detail && <span className="small muted" style={{ display: 'block' }}>{o.detail}</span>}</span>
+                    <span>{o.name}{o.detail && <span className="small muted" style={{ display: 'block', fontWeight: 400, whiteSpace: 'pre-wrap', marginTop: 2 }}>{o.detail}</span>}</span>
                   </label>
                 );
               })}
@@ -236,10 +250,27 @@ export function VoterApp() {
           </fieldset>
         </div>
       )}
-      <p className="small muted" aria-live="polite">{answered} of {total} answered</p>
-      <button className="btn block" disabled={!complete} onClick={() => { setStage('review'); window.scrollTo(0, 0); }}>
-        {complete ? 'Review my vote' : def.type === 'agenda' ? 'Make the required choices to continue' : 'Answer every item to continue'}
-      </button>
+      {def.type === 'agenda' ? (() => {
+        const it = def.items[step];
+        const ok = okItem(it.id, it.minChoices, it.maxChoices);
+        const last = step === def.items.length - 1;
+        const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
+        return (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <button className="btn block" disabled={!ok} onClick={() => (last ? (setStage('review'), window.scrollTo(0, 0)) : go(step + 1))}>
+              {!ok ? 'Make the required choice to continue' : last ? 'Review my vote' : <>Next item <ArrowRight size={18} aria-hidden="true" /></>}
+            </button>
+            {step > 0 && <button className="btn secondary block" onClick={() => go(step - 1)}><ArrowLeft size={18} aria-hidden="true" /> Previous item</button>}
+          </div>
+        );
+      })() : (
+        <>
+          <p className="small muted" aria-live="polite">{answered} of {total} answered</p>
+          <button className="btn block" disabled={!complete} onClick={() => { setStage('review'); window.scrollTo(0, 0); }}>
+            {complete ? 'Review my vote' : 'Answer every item to continue'}
+          </button>
+        </>
+      )}
     </>,
   );
 }

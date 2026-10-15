@@ -8,7 +8,7 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 const KIND: Record<string, string> = {
-  agm_resolutions: 'AGM resolutions', board_election: 'Board election', internal_poll: 'Internal poll',
+  agm_resolutions: 'AGM resolutions', board_election: 'Board election', internal_poll: 'Internal poll', creditor_vote: 'Creditor / stakeholder vote',
 };
 export const kindLabel = (k: string) => KIND[k] ?? k;
 

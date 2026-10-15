@@ -23,7 +23,7 @@ export async function castVote(pool: pg.Pool, orgId: string, input: {
       return { status: 'rejected', reason: 'invalid_credential' };
     }
     const { rows: [ballot] } = await tx.query(
-      `SELECT d.version, d.definition, el.tally_public_key FROM ballot_definitions d
+      `SELECT d.version, d.definition, el.tally_public_key, el.kind FROM ballot_definitions d
          JOIN elections el ON el.id = d.election_id
         WHERE d.election_id = $1 AND d.published_at IS NOT NULL`, [input.electionId]);
     if (!ballot) return { status: 'rejected', reason: 'voting_closed' };
@@ -42,10 +42,13 @@ export async function castVote(pool: pg.Pool, orgId: string, input: {
     });
     const payload = encryptBallot(plaintext, ballot.tally_public_key, input.electionId);
 
+    // A creditor vote is an open ballot: the choices are also recorded against the voter.
+    const open = ballot.kind === 'creditor_vote';
     const { rows: [r] } = await tx.query(
       // FROM-clause call on purpose: `SELECT (f()).*` would run f once per column.
-      'SELECT * FROM vs.cast_ballot($1, $2, $3, $4, $5, $6)',
-      [input.electionId, d.credentialHash, d.retryTag, d.receiptCommitment, ballot.version, payload]);
+      open ? 'SELECT * FROM vs.cast_open_vote($1, $2, $3, $4, $5, $6, $7)' : 'SELECT * FROM vs.cast_ballot($1, $2, $3, $4, $5, $6)',
+      [input.electionId, d.credentialHash, d.retryTag, d.receiptCommitment, ballot.version, payload,
+       ...(open ? [canonicalJson(input.choices)] : [])]);
     if (r.outcome !== 'accepted') return { status: 'rejected', reason: r.outcome };
     return { status: 'accepted', receiptCode: d.receiptCode, replayed: r.replayed };
   });

@@ -24,7 +24,9 @@ export default async function PublicResults({ params }: { params: Promise<{ org:
           <Reconciliation result={r.result} resultHash={r.result_hash} />
           <Results definition={r.definition} result={r.result} />
         </div>
-        <p className="small muted" style={{ marginTop: 16 }}>Individual choices are never shown. This is a secret ballot.</p>
+        <p className="small muted" style={{ marginTop: 16 }}>{r.kind === 'creditor_vote'
+          ? 'This page shows totals only. The record of how each voter voted is available to the administrator.'
+          : 'Individual choices are never shown. This is a secret ballot.'}</p>
       </main>
       <SiteFooter />
     </>

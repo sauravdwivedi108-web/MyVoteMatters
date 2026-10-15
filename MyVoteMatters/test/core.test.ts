@@ -311,6 +311,57 @@ test('board agenda: admin sets how many picks, each pick carries the voter\'s un
   assert.equal(chair.blankBallots, 1);
 });
 
+test('creditor vote: open ballot recorded by name, hidden until close, threshold on the whole roll', async () => {
+  const org = await seedOrg(h.admin, 'coc');
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'CoC meeting 4', kind: 'creditor_vote', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000),
+  });
+  await importRoll(h.app, org.orgId, org.maker, electionId, [
+    { eligibilityRef: 'State Bank', votingUnits: 600 }, { eligibilityRef: 'Axis Bank', votingUnits: 300 }, { eligibilityRef: 'ARC One', votingUnits: 100 }]);
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, { type: 'agenda', items: [
+    { id: 'A1', title: 'Resolution plan', description: '', minChoices: 1, maxChoices: 1, thresholdPct: 66,
+      options: [{ id: 'O1', name: 'Plan by X Ltd', detail: 'Upfront 40%' }, { id: 'O2', name: 'Plan by Y Ltd' }] },
+  ] });
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  const { tallyPrivateKeyPem } = await approveElection(h.app, org.orgId, org.checker, electionId);
+  const creds = Object.fromEntries((await issueCredentials(h.app, org.orgId, org.maker, electionId)).map((c) => [c.eligibilityRef, c.secret]));
+  await transition(h.app, org.orgId, org.maker, electionId, 'open');
+  const report = () => withTenant(h.app, org.orgId, async (tx) => (await tx.query('SELECT * FROM vs.open_vote_report($1)', [electionId])).rows);
+
+  assert.equal((await castVote(h.app, org.orgId, { electionId, credentialSecret: creds['State Bank'], choices: { A1: 'O1' } })).status, 'accepted');
+  assert.equal((await castVote(h.app, org.orgId, { electionId, credentialSecret: creds['Axis Bank'], choices: { A1: 'O2' } })).status, 'accepted');
+
+  const live = await report();
+  assert.deepEqual(live.map((r) => [r.eligibility_ref, r.voted, r.choices]),
+    [['State Bank', true, null], ['Axis Bank', true, null], ['ARC One', false, null]]);
+
+  await transition(h.app, org.orgId, org.maker, electionId, 'closed');
+  const after = await report();
+  assert.deepEqual(after.map((r) => [r.eligibility_ref, r.choices]), [['State Bank', { A1: 'O1' }], ['Axis Bank', { A1: 'O2' }], ['ARC One', null]]);
+
+  const r = await tallyElection(h.tally, org.orgId, 'svc:tally', electionId, tallyPrivateKeyPem);
+  assert.equal(r.unitsEligible, '1000');
+  // 600 of 1000 is 60%, below 66% of the whole committee, so nothing is approved.
+  assert.deepEqual(r.agenda![0].selected, []);
+});
+
+test('creditor vote: a consumption without a named record is refused at commit', async () => {
+  const org = await seedOrg(h.admin, 'coc2');
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'CoC', kind: 'creditor_vote', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000),
+  });
+  await importRoll(h.app, org.orgId, org.maker, electionId, [{ eligibilityRef: 'Bank', votingUnits: 1 }]);
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, { type: 'agenda', items: [
+    { id: 'A1', title: 'Plan', description: '', minChoices: 1, maxChoices: 1, options: [{ id: 'O1', name: 'For' }, { id: 'O2', name: 'Against' }] }] });
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  await approveElection(h.app, org.orgId, org.checker, electionId);
+  const [c] = await issueCredentials(h.app, org.orgId, org.maker, electionId);
+  await transition(h.app, org.orgId, org.maker, electionId, 'open');
+  const { credentialHash } = await import('../lib/core/crypto');
+  await assert.rejects(withTenant(h.app, org.orgId, (tx) => tx.query(
+    `SELECT * FROM vs.cast_ballot($1, $2, 'tag', 'receipt', 1, '\\x00')`, [electionId, credentialHash(c.secret)])), /open_vote_missing/);
+});
+
 test('roll import reports bad rows instead of guessing', async () => {
   const org = await seedOrg(h.admin, 'import');
   const electionId = await createElection(h.app, org.orgId, org.maker, {

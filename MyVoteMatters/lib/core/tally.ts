@@ -17,6 +17,7 @@ export type AgendaItemResult = {
   /** Options in the top `seats` places. Empty when a tie straddles the cut-off. */
   selected: string[];
   tiedAtCutoff: boolean;
+  thresholdPct?: number;
   blankBallots: number;
 };
 
@@ -30,6 +31,8 @@ export type TallyResult = {
   candidates?: CandidateResult[];
   winner?: string | null;
   agenda?: AgendaItemResult[];
+  /** Total voting units on the roll, the base for threshold percentages. */
+  unitsEligible?: string;
 };
 
 /**
@@ -138,19 +141,25 @@ export async function tallyElection(tallyPool: pg.Pool, orgId: string, actor: st
         };
       });
     } else if (definition.type === 'agenda') {
+      result.unitsEligible = String(t.units_eligible);
       result.agenda = definition.items.map((it) => {
         const tot = agendaTotals.get(it.id)!;
         const options = it.options.map((o) => ({
           id: o.id, name: o.name, votes: tot.units.get(o.id)!.toString(), ballots: tot.ballots.get(o.id)!,
         }));
         const sorted = [...options].sort((a, b) => (BigInt(b.votes) > BigInt(a.votes) ? 1 : BigInt(b.votes) < BigInt(a.votes) ? -1 : 0));
+        // With a threshold, only options backed by that share of the whole roll can be selected.
+        const bp = it.thresholdPct === undefined ? null : BigInt(Math.round(it.thresholdPct * 100));
+        const total = BigInt(t.units_eligible);
+        const contenders = sorted.filter((o) => BigInt(o.votes) > 0n && (bp === null || BigInt(o.votes) * 10000n >= bp * total));
         const seats = it.maxChoices;
         // A tie across the last place is reported, never broken silently.
-        const tiedAtCutoff = sorted.length > seats && sorted[seats - 1].votes === sorted[seats].votes;
+        const tiedAtCutoff = contenders.length > seats && contenders[seats - 1].votes === contenders[seats].votes;
         return {
           id: it.id, title: it.title, seats, options,
-          selected: tiedAtCutoff ? [] : sorted.slice(0, seats).filter((o) => BigInt(o.votes) > 0n).map((o) => o.id),
+          selected: tiedAtCutoff ? [] : contenders.slice(0, seats).map((o) => o.id),
           tiedAtCutoff, blankBallots: tot.blank,
+          ...(it.thresholdPct !== undefined ? { thresholdPct: it.thresholdPct } : {}),
         };
       });
     } else {

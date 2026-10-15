@@ -9,7 +9,7 @@ export class DomainError extends Error {
 
 export type ElectionInput = {
   title: string;
-  kind: 'agm_resolutions' | 'board_election' | 'internal_poll';
+  kind: 'agm_resolutions' | 'board_election' | 'internal_poll' | 'creditor_vote';
   startsAt: Date;
   endsAt: Date;
   recordDate?: string;

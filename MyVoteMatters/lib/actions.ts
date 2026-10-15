@@ -199,11 +199,11 @@ export async function newElection(_: FormState, fd: FormData): Promise<FormState
   try {
     requirePermission(s, 'manage');
     const title = str(fd, 'title');
-    const kind = str(fd, 'kind') as 'agm_resolutions' | 'board_election' | 'internal_poll';
+    const kind = str(fd, 'kind') as 'agm_resolutions' | 'board_election' | 'internal_poll' | 'creditor_vote';
     const startsAt = istDate(str(fd, 'starts_at'));
     const endsAt = istDate(str(fd, 'ends_at'));
     if (!title) return { error: 'Give the election a title.' };
-    if (!['agm_resolutions', 'board_election', 'internal_poll'].includes(kind)) return { error: 'Choose an election type.' };
+    if (!['agm_resolutions', 'board_election', 'internal_poll', 'creditor_vote'].includes(kind)) return { error: 'Choose an election type.' };
     if (isNaN(+startsAt) || isNaN(+endsAt)) return { error: 'Enter when voting opens and closes.' };
     if (endsAt <= startsAt) return { error: 'Voting must close after it opens.' };
     id = await createElection(await db(), s.orgId, s.userId, {
@@ -221,12 +221,16 @@ export async function uploadRoll(electionId: string, _: FormState, fd: FormData)
     requirePermission(s, 'manage');
     const text = str(fd, 'csv');
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const header = lines[0] && /ref|folio|member|id/i.test(lines[0]) && !/\d+\s*$/.test(lines[0]);
+    const header = lines[0] && /ref|folio|member|id|name|creditor/i.test(lines[0]) && !/\d+\s*$/.test(lines[0]);
     if (header) lines.shift();
     if (!lines.length) return { error: 'Paste at least one row: reference, voting units.' };
     const rows = lines.map((l) => {
-      const [ref, units] = l.split(/[,\t;]/).map((x) => x.trim());
-      return { eligibilityRef: ref, votingUnits: units ?? '' };
+      // The last column is the weight, so names may contain commas. Rows copied from
+      // Excel are tab-separated and may show amounts as 4,50,00,000 or with a ₹ sign.
+      const m = l.includes('\t') ? l.match(/^(.*)\t\s*([^\t]*)$/) : (l.match(/^(.*?)[,;]\s*(₹?\s*\d[\d,\s]*)$/) ?? l.match(/^(.*)[,;]\s*([^,;]*)$/));
+      const ref = (m ? m[1] : l).trim().replace(/[,;\t]+$/, '').trim();
+      const units = (m ? m[2] : '').replace(/[₹,\s]/g, '');
+      return { eligibilityRef: ref, votingUnits: units };
     });
     const report = await importRoll(await db(), s.orgId, s.userId, electionId, rows);
     revalidatePath(`/app/elections/${electionId}`);

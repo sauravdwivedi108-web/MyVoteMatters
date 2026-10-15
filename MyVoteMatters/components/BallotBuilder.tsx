@@ -7,18 +7,22 @@ import { Notice, Submit } from './forms';
 
 type Res = { id: string; title: string; text: string; majority: 'ordinary' | 'special' };
 type Opt = { name: string; detail: string };
-type Item = { title: string; description: string; options: Opt[]; minChoices: number; maxChoices: number };
+type Item = { title: string; description: string; options: Opt[]; minChoices: number; maxChoices: number; threshold: string };
 
-const blankItem = (): Item => ({ title: '', description: '', options: [{ name: '', detail: '' }, { name: '', detail: '' }], minChoices: 1, maxChoices: 1 });
+const blankItem = (threshold = ''): Item => ({ title: '', description: '', options: [{ name: '', detail: '' }, { name: '', detail: '' }], minChoices: 1, maxChoices: 1, threshold });
 
-function initialItems(initial: BallotDefinition | null): Item[] {
+function initialItems(initial: BallotDefinition | null, threshold: string): Item[] {
   if (initial?.type === 'agenda') {
-    return initial.items.map((it) => ({ ...it, options: it.options.map((o) => ({ name: o.name, detail: o.detail ?? '' })) }));
+    return initial.items.map((it) => ({
+      title: it.title, description: it.description, minChoices: it.minChoices, maxChoices: it.maxChoices,
+      threshold: it.thresholdPct === undefined ? '' : String(it.thresholdPct),
+      options: it.options.map((o) => ({ name: o.name, detail: o.detail ?? '' })),
+    }));
   }
   if (initial?.type === 'single_choice') {
-    return [{ title: initial.question, description: '', options: initial.candidates.map((c) => ({ name: c.name, detail: '' })), minChoices: 1, maxChoices: 1 }];
+    return [{ ...blankItem(threshold), title: initial.question, options: initial.candidates.map((c) => ({ name: c.name, detail: '' })) }];
   }
-  return [blankItem()];
+  return [blankItem(threshold)];
 }
 
 export function BallotBuilder({ kind, initial, action }: {
@@ -28,7 +32,8 @@ export function BallotBuilder({ kind, initial, action }: {
   const isRes = kind === 'agm_resolutions';
   const [resolutions, setRes] = useState<Res[]>(
     initial?.type === 'resolutions' ? initial.resolutions : [{ id: 'R1', title: '', text: '', majority: 'ordinary' }]);
-  const [items, setItems] = useState<Item[]>(() => initialItems(initial));
+  const creditor = kind === 'creditor_vote';
+  const [items, setItems] = useState<Item[]>(() => initialItems(initial, creditor ? '66' : ''));
 
   const def: BallotDefinition = isRes
     ? { type: 'resolutions', resolutions: resolutions.map((r, i) => ({ ...r, id: `R${i + 1}`, title: r.title.trim(), text: r.text.trim() })) }
@@ -38,6 +43,7 @@ export function BallotBuilder({ kind, initial, action }: {
           id: `A${i + 1}`, title: it.title.trim(), description: it.description.trim(),
           options: it.options.map((o, j) => ({ id: `O${j + 1}`, name: o.name.trim(), ...(o.detail.trim() ? { detail: o.detail.trim() } : {}) })),
           minChoices: it.minChoices, maxChoices: it.maxChoices,
+          ...(it.threshold.trim() ? { thresholdPct: Number(it.threshold) } : {}),
         })),
       };
 
@@ -111,13 +117,14 @@ export function BallotBuilder({ kind, initial, action }: {
                   <div key={j} className="opt-row">
                     <span className="small muted opt-n">{j + 1}</span>
                     <input aria-label={`Option ${j + 1} name`} id={`ao${i}-${j}`} type="text" value={o.name}
-                      onChange={(e) => updOpt(i, j, { name: e.target.value })} placeholder="Name" required />
-                    <input aria-label={`Option ${j + 1} detail`} type="text" value={o.detail}
-                      onChange={(e) => updOpt(i, j, { detail: e.target.value })} placeholder="Detail, e.g. DIN (optional)" />
-                    {it.options.length > 2 && (
+                      onChange={(e) => updOpt(i, j, { name: e.target.value })} placeholder={creditor ? 'e.g. Resolution plan by X Ltd' : 'Name'} required />
+                    {it.options.length > 2 ? (
                       <button type="button" className="btn ghost small" aria-label={`Remove option ${j + 1}`}
                         onClick={() => updItem(i, { options: it.options.filter((_, k) => k !== j) })}>Remove</button>
-                    )}
+                    ) : <span />}
+                    <textarea aria-label={`Option ${j + 1} description`} className="opt-desc" value={o.detail}
+                      onChange={(e) => updOpt(i, j, { detail: e.target.value })}
+                      placeholder={creditor ? 'Description (optional): amount offered, payment timeline, key terms' : 'Description (optional), e.g. DIN, experience'} />
                   </div>
                 ))}
                 <button type="button" className="btn secondary small" onClick={() => updItem(i, { options: [...it.options, { name: '', detail: '' }] })}>+ Add option</button>
@@ -134,12 +141,20 @@ export function BallotBuilder({ kind, initial, action }: {
                     onChange={(e) => updItem(i, { minChoices: Number(e.target.value) || 0 })} />
                 </div>
               </div>
+              <div className="field" style={{ margin: '12px 0 0', maxWidth: 360 }}>
+                <label htmlFor={`ath${i}`}>Approval threshold <span className="hint">% of total voting share, optional</span></label>
+                <input id={`ath${i}`} type="number" min={1} max={100} step="0.01" value={it.threshold}
+                  onChange={(e) => updItem(i, { threshold: e.target.value })} placeholder="e.g. 66 for a resolution plan, 51 for other decisions" />
+              </div>
               <p className="small muted" style={{ margin: '8px 0 0' }}>
-                Voters see: <strong>{picksLabel(it.minChoices, it.maxChoices)}</strong>. The top {it.maxChoices} {it.maxChoices === 1 ? 'option wins' : 'options win'}.
+                Voters see: <strong>{picksLabel(it.minChoices, it.maxChoices)}</strong>.{' '}
+                {it.threshold.trim()
+                  ? <>An option is approved only with at least {it.threshold}% of the total voting share; the top {it.maxChoices} of those {it.maxChoices === 1 ? 'is' : 'are'} selected.</>
+                  : <>The top {it.maxChoices} {it.maxChoices === 1 ? 'option wins' : 'options win'}.</>}
               </p>
             </div>
           ))}
-          <button type="button" className="btn secondary small" onClick={() => setItems([...items, blankItem()])}>+ Add agenda item</button>
+          <button type="button" className="btn secondary small" onClick={() => setItems([...items, blankItem(creditor ? '66' : '')])}>+ Add agenda item</button>
         </>
       )}
       <div style={{ marginTop: 18 }}><Submit pendingText="Saving…">Save ballot</Submit></div>

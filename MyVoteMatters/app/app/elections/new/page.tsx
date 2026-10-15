@@ -22,8 +22,9 @@ export default async function NewElection() {
             <label htmlFor="kind">Type</label>
             <select id="kind" name="kind" defaultValue="agm_resolutions">
               <option value="agm_resolutions">AGM resolutions (for / against / abstain, weighted by shares)</option>
-              <option value="board_election">Board election (one candidate, weighted by shares)</option>
-              <option value="internal_poll">Internal poll (one candidate or option)</option>
+              <option value="board_election">Board election (agenda items with candidates, secret ballot)</option>
+              <option value="creditor_vote">Creditor / stakeholder vote for an insolvent company (open ballot: admin sees who voted for what)</option>
+              <option value="internal_poll">Internal poll (agenda items with options, secret ballot)</option>
             </select>
           </div>
           <div className="row">

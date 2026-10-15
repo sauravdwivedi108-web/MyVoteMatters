@@ -21,7 +21,12 @@ export async function POST(req: Request) {
          FROM elections e JOIN organizations o ON o.id = e.organization_id
          LEFT JOIN ballot_definitions d ON d.election_id = e.id AND d.published_at IS NOT NULL
         WHERE e.id = $1`, [t.electionId]);
-    return { ...e, already_voted: ctx.already_voted, voting_units: String(ctx.voting_units) };
+    const { rows: [named] } = e.kind === 'creditor_vote'
+      ? await tx.query('SELECT * FROM vs.open_voter_context($1)', [credentialHash(t.secret)]) : { rows: [] };
+    return {
+      ...e, already_voted: ctx.already_voted, voting_units: String(ctx.voting_units),
+      ...(named ? { voter_name: named.eligibility_ref, units_total: String(named.units_total) } : {}),
+    };
   });
   if (!data) return NextResponse.json({ error: 'invalid_link' }, { status: 404 });
   return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store' } });

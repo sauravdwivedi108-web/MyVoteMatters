@@ -22,6 +22,12 @@ export type AgendaItem = {
   id: string; title: string; description: string;
   options: { id: string; name: string; detail?: string }[];
   minChoices: number; maxChoices: number;
+  /**
+   * Optional approval threshold as a percentage of the total voting units on
+   * the roll (not just of votes cast), e.g. 66 for a resolution plan before a
+   * committee of creditors. Only options reaching it can be selected.
+   */
+  thresholdPct?: number;
 };
 export type AgendaBallot = { type: 'agenda'; items: AgendaItem[] };
 export type BallotDefinition = ResolutionBallot | SingleChoiceBallot | AgendaBallot;
@@ -77,6 +83,9 @@ export function validateDefinition(def: BallotDefinition): string[] {
           || item.minChoices < 0 || item.maxChoices < 1 || item.minChoices > item.maxChoices
           || item.maxChoices > item.options.length) {
         errors.push(`${label}: picks must be between 0 and the number of options, with at least 1 allowed`);
+      }
+      if (item.thresholdPct !== undefined && !(typeof item.thresholdPct === 'number' && item.thresholdPct > 0 && item.thresholdPct <= 100)) {
+        errors.push(`${label}: the approval threshold must be a percentage above 0 and at most 100`);
       }
       const longest = item.options.map((o) => o.id.length + 1).sort((a, b) => b - a).slice(0, item.maxChoices);
       worst += item.id.length + 6 + longest.reduce((a, b) => a + b, 0);

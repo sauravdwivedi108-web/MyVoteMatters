@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireSession, can } from '@/lib/auth';
-import { getElection } from '@/lib/queries';
+import { getElection, getOpenVoteReport } from '@/lib/queries';
+import { OpenVoteReport } from '@/components/OpenVoteReport';
 import {
   uploadRoll, saveBallot, submitElection, returnToDraft, approve, issueInvitations, openVoting, closeVoting, count, publish,
   deleteElection, removeVoters,
@@ -30,6 +31,8 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
   const at = ORDER.indexOf(e.status);
   const draft = e.status === 'draft';
   const manage = can(s, 'manage');
+  const creditor = e.kind === 'creditor_vote';
+  const report = creditor && ['open', 'closed', 'tallied', 'published'].includes(e.status) ? await getOpenVoteReport(s, e.id) : null;
   const now = Date.now();
   const inWindow = now >= +new Date(e.starts_at) && now < +new Date(e.ends_at);
   const turnoutPct = e.eligible ? Math.round((e.voted / e.eligible) * 100) : 0;
@@ -162,6 +165,13 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
           </div>
         )}
 
+        {report && e.ballot?.definition.type === 'agenda' && (
+          <div className="card">
+            <div className="card-head"><h2 className="h-icon"><Users size={20} aria-hidden="true" />Who voted for what</h2><span className="small muted">Open ballot</span></div>
+            <OpenVoteReport title={e.title} definition={e.ballot.definition} rows={report} />
+          </div>
+        )}
+
         {/* ---------------- Configuration ---------------- */}
         <div className="grid-2">
           <div className="card">
@@ -172,9 +182,16 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
             {draft && manage && (
               <ActionForm action={uploadRoll.bind(null, e.id)}>
                 <div className="field">
-                  <label htmlFor="csv">Paste rows: reference, voting units</label>
-                  <textarea id="csv" name="csv" className="mono" placeholder={'FOLIO-0001, 1500\nFOLIO-0002, 250\nDP-IN301234-5678, 10000'} />
-                  <div className="hint">One row per entitlement (folio, client ID or member number). For a one-person-one-vote poll use 1 unit each. Copy straight from Excel.</div>
+                  {creditor ? <>
+                    <label htmlFor="csv">Paste rows: creditor or stakeholder name, voting weight</label>
+                    <textarea id="csv" name="csv" className="mono" placeholder={'State Bank of India, 4500000000\nAxis Bank, 1800000000\nOperational creditors (authorised rep), 320000000'} />
+                  </> : <>
+                    <label htmlFor="csv">Paste rows: reference, voting units</label>
+                    <textarea id="csv" name="csv" className="mono" placeholder={'FOLIO-0001, 1500\nFOLIO-0002, 250\nDP-IN301234-5678, 10000'} />
+                  </>}
+                  <div className="hint">{creditor
+                    ? 'One row per creditor or stakeholder. Use the admitted claim in rupees (or any weight); each voter\'s share of the total is worked out for you. Copy straight from Excel.'
+                    : 'One row per entitlement (folio, client ID or member number). For a one-person-one-vote poll use 1 unit each. Copy straight from Excel.'}</div>
                 </div>
                 <Submit className="btn secondary" pendingText="Importing…">Import rows</Submit>
               </ActionForm>

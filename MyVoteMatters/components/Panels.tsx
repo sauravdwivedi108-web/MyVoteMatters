@@ -4,7 +4,10 @@ import { useState, useTransition } from 'react';
 import type { FormState } from '@/lib/actions';
 import { Notice } from './forms';
 
-function download(name: string, content: string, type = 'text/plain') {
+/** Quotes a CSV cell when it contains a comma, quote or line break. */
+export const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+export function download(name: string, content: string, type = 'text/plain') {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   a.click();
@@ -50,7 +53,7 @@ export function InvitePanel({ action, title }: { action: () => Promise<FormState
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState<string>();
   const links = state?.links ?? [];
-  const csv = 'reference,voting_link\n' + links.map((l) => `${l.ref},${l.url}`).join('\n');
+  const csv = 'reference,voting_link\n' + links.map((l) => `${csvCell(l.ref)},${l.url}`).join('\n');
 
   return (
     <div>

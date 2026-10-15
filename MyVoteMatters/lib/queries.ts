@@ -77,6 +77,16 @@ export async function listTeam(s: Session) {
     { id: string; email: string; name: string | null; role: string }[]);
 }
 
+export type OpenVoteRow = {
+  eligibility_ref: string; voting_units: string; voted: boolean; cast_at: Date | null; choices: Record<string, string> | null;
+};
+
+/** Named votes for a creditor vote: who has voted while open; what they chose once closed (enforced in the database). */
+export async function getOpenVoteReport(s: Session, electionId: string): Promise<OpenVoteRow[]> {
+  return withTenant(await db(), s.orgId, async (tx) => (await tx.query(
+    `SELECT eligibility_ref, voting_units::text, voted, cast_at, choices FROM vs.open_vote_report($1)`, [electionId])).rows);
+}
+
 /** Published results only; anything not yet published is indistinguishable from not found. */
 export async function getPublishedResult(orgId: string, electionId: string) {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
