@@ -95,10 +95,13 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
     if (password.length < 10) return { error: 'Set a temporary password of at least 10 characters.' };
     const hash = await hashPassword(password);
     await withTenant(await db(), s.orgId, async (tx) => {
-      let { rows: [u] } = await tx.query(`SELECT id FROM users WHERE email_normalized = $1`, [email]);
+      let { rows: [u] } = await tx.query(`SELECT id, password_hash FROM users WHERE email_normalized = $1`, [email]);
       if (!u) {
         ({ rows: [u] } = await tx.query(
           `INSERT INTO users (email_normalized, display_name, password_hash) VALUES ($1, $2, $3) RETURNING id`, [email, name, hash]));
+      } else if (!u.password_hash) {
+        // A previously removed user coming back: give them the new temporary password.
+        await tx.query(`UPDATE users SET password_hash = $2, display_name = $3 WHERE id = $1`, [u.id, hash, name]);
       }
       await tx.query(`INSERT INTO memberships (organization_id, user_id, role) VALUES (vs.current_org(), $1, $2)`, [u.id, role]);
       await audit(tx, s.orgId, `user:${s.userId}`, 'member.added', `user:${u.id}`, { role });
@@ -108,6 +111,82 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
   }
   revalidatePath('/app/team');
   return { ok: 'Member added. Share the temporary password with them directly.' };
+}
+
+/** Memberships in this organisation, checked so the last owner can never be removed or demoted. */
+async function memberFor(tx: Parameters<typeof audit>[0], userId: string) {
+  const { rows: [m] } = await tx.query(`SELECT role FROM memberships WHERE user_id = $1`, [userId]);
+  if (!m) throw new Error('forbidden: that person is not a member of this organisation');
+  const { rows: [o] } = await tx.query(`SELECT count(*)::int AS n FROM memberships WHERE role = 'owner' AND status = 'active'`);
+  return { role: m.role as string, owners: o.n as number };
+}
+
+export async function changeRole(userId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const role = str(fd, 'role');
+  try {
+    requirePermission(s, 'team');
+    if (!['election_admin', 'approver', 'scrutinizer', 'viewer', 'owner'].includes(role)) return { error: 'Choose a role.' };
+    await withTenant(await db(), s.orgId, async (tx) => {
+      const m = await memberFor(tx, userId);
+      if (m.role === 'owner' && role !== 'owner' && m.owners <= 1) throw new Error('forbidden: the organisation needs at least one owner');
+      await tx.query(`UPDATE memberships SET role = $2 WHERE user_id = $1`, [userId, role]);
+      await audit(tx, s.orgId, `user:${s.userId}`, 'member.role_changed', `user:${userId}`, { from: m.role, to: role });
+    });
+  } catch (err) {
+    return { error: friendlyError(err) };
+  }
+  revalidatePath('/app/team');
+  return { ok: 'Role updated.' };
+}
+
+/** Sets a new temporary password and signs the member out everywhere. */
+export async function resetPassword(userId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const password = String(fd.get('password') ?? '');
+  try {
+    requirePermission(s, 'team');
+    if (password.length < 10) return { error: 'Use a password of at least 10 characters.' };
+    const hash = await hashPassword(password);
+    await withTenant(await db(), s.orgId, async (tx) => {
+      await memberFor(tx, userId);
+      // An owner here must not take over an account that also belongs to another organisation.
+      const { rows } = await tx.query(`SELECT organization_id FROM vs.user_memberships($1)`, [userId]);
+      if (rows.some((r) => r.organization_id !== s.orgId)) {
+        throw new Error('forbidden: this person also belongs to another organisation, so only they can change their password');
+      }
+      await tx.query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [userId, hash]);
+      await tx.query(`UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
+      await audit(tx, s.orgId, `user:${s.userId}`, 'member.password_reset', `user:${userId}`);
+    });
+  } catch (err) {
+    return { error: friendlyError(err) };
+  }
+  revalidatePath('/app/team');
+  return { ok: userId === s.userId ? 'Password changed. Sign in again with the new one.' : 'Password reset. Share it with them directly.' };
+}
+
+/** Removes a member's access to this organisation and ends their sessions here. */
+export async function removeMember(userId: string): Promise<FormState> {
+  const s = await requireSession();
+  try {
+    requirePermission(s, 'team');
+    if (userId === s.userId) return { error: 'You cannot remove yourself. Ask another owner.' };
+    await withTenant(await db(), s.orgId, async (tx) => {
+      const m = await memberFor(tx, userId);
+      if (m.role === 'owner' && m.owners <= 1) throw new Error('forbidden: the organisation needs at least one owner');
+      await tx.query(`DELETE FROM memberships WHERE user_id = $1`, [userId]);
+      await tx.query(`UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND organization_id = vs.current_org() AND revoked_at IS NULL`, [userId]);
+      // With no organisation left, the login itself is switched off.
+      const { rows } = await tx.query(`SELECT 1 FROM vs.user_memberships($1)`, [userId]);
+      if (!rows.length) await tx.query(`UPDATE users SET password_hash = NULL WHERE id = $1`, [userId]);
+      await audit(tx, s.orgId, `user:${s.userId}`, 'member.removed', `user:${userId}`, { role: m.role });
+    });
+  } catch (err) {
+    return { error: friendlyError(err) };
+  }
+  revalidatePath('/app/team');
+  return { ok: 'Removed.' };
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +251,49 @@ export async function saveBallot(electionId: string, _: FormState, fd: FormData)
   } catch (err) {
     return { error: friendlyError(err) };
   }
+}
+
+/** Deletes an election that is still a draft, with its roll and ballot. Anything past draft is permanent. */
+export async function deleteElection(electionId: string): Promise<FormState> {
+  const s = await requireSession();
+  try {
+    requirePermission(s, 'manage');
+    await withTenant(await db(), s.orgId, async (tx) => {
+      const { rows: [e] } = await tx.query(`SELECT status, title FROM elections WHERE id = $1 FOR UPDATE`, [electionId]);
+      if (!e) throw new Error('forbidden: election not found');
+      if (e.status !== 'draft') throw new Error('forbidden: only a draft election can be deleted; once approved it is part of the permanent record');
+      await tx.query(`DELETE FROM ballot_definitions WHERE election_id = $1`, [electionId]);
+      await tx.query(`DELETE FROM voter_eligibility WHERE election_id = $1`, [electionId]);
+      await tx.query(`DELETE FROM elections WHERE id = $1`, [electionId]);
+      await audit(tx, s.orgId, `user:${s.userId}`, 'election.deleted', `election:${electionId}`, { title: e.title });
+    });
+  } catch (err) {
+    return { error: friendlyError(err) };
+  }
+  revalidatePath('/app');
+  revalidatePath('/app/elections');
+  redirect('/app/elections');
+}
+
+/** Removes one voter, or the whole roll when no reference is given. Draft only (enforced by the database). */
+export async function removeVoters(electionId: string, ref?: string): Promise<FormState> {
+  const s = await requireSession();
+  let n = 0;
+  try {
+    requirePermission(s, 'manage');
+    n = await withTenant(await db(), s.orgId, async (tx) => {
+      const r = ref
+        ? await tx.query(`DELETE FROM voter_eligibility WHERE election_id = $1 AND eligibility_ref = $2`, [electionId, ref])
+        : await tx.query(`DELETE FROM voter_eligibility WHERE election_id = $1`, [electionId]);
+      await audit(tx, s.orgId, `user:${s.userId}`, ref ? 'roll.entry_removed' : 'roll.cleared', `election:${electionId}`,
+        ref ? { ref } : { removed: r.rowCount });
+      return r.rowCount ?? 0;
+    });
+  } catch (err) {
+    return { error: friendlyError(err) };
+  }
+  revalidatePath(`/app/elections/${electionId}`);
+  return { ok: `Removed ${n}.` };
 }
 
 async function step(electionId: string, fn: () => Promise<unknown>): Promise<FormState> {

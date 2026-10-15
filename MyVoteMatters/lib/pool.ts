@@ -15,7 +15,20 @@ function findConnectionString(): string | undefined {
   const pick = keys.find((k) => /_DATABASE_URL$|_POSTGRES_URL$/.test(k))
     ?? keys.find((k) => /_URL$/.test(k) && !/UNPOOLED|NON_POOLING|NO_SSL/.test(k))
     ?? keys[0];
-  return pick ? env[pick] : undefined;
+  if (pick) return env[pick];
+  // Some integrations only set the libpq-style variables.
+  if (env.PGHOST && env.PGUSER && env.PGPASSWORD) {
+    const u = new URL('postgres://placeholder');
+    u.hostname = env.PGHOST; u.username = env.PGUSER; u.password = env.PGPASSWORD;
+    u.pathname = `/${env.PGDATABASE ?? 'postgres'}`; u.searchParams.set('sslmode', 'require');
+    return u.toString();
+  }
+  return undefined;
+}
+
+/** Names (never values) of environment variables that look database-related, for the setup screen. */
+export function databaseEnvNames(): string[] {
+  return Object.keys(process.env).filter((k) => /DATABASE|POSTGRES|NEON|^PG/.test(k)).sort();
 }
 
 const connectionString = findConnectionString();

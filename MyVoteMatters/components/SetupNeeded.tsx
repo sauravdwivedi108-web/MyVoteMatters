@@ -1,7 +1,9 @@
 import { Database, PlugZap, RefreshCw } from 'lucide-react';
 import { Brand } from './Brand';
+import { databaseEnvNames } from '@/lib/pool';
 
 export function SetupNeeded() {
+  const names = databaseEnvNames();
   return (
     <div className="auth-wrap">
       <div className="card auth-card" style={{ maxWidth: 520 }}>
@@ -16,6 +18,12 @@ export function SetupNeeded() {
           <li><span className="n"><RefreshCw size={16} aria-hidden="true" /></span>
             <span>Open <strong>Deployments</strong>, click <strong>⋯</strong> on the latest one and choose <strong>Redeploy</strong>. Tables are created on first use.</span></li>
         </ol>
+        <div className="notice info small">
+          <strong>What this deployment can see:</strong>{' '}
+          {names.length
+            ? <>database-related settings named <code>{names.join(', ')}</code>, but none holds a postgres:// address.</>
+            : <>no database settings at all. Either the database is not connected to this project yet, or the site has not been redeployed since connecting it.</>}
+        </div>
       </div>
     </div>
   );

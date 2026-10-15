@@ -234,3 +234,11 @@ td.r, th.r { text-align: right; }
 .setup-steps { list-style: none; padding: 0; margin: 18px 0; }
 .setup-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
 .setup-steps li .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--violet-soft); color: var(--violet-strong); display: grid; place-items: center; font-weight: 700; }
+
+/* Team administration */
+details.manage { margin-top: 8px; }
+details.manage summary { cursor: pointer; color: var(--violet-strong); font-weight: 600; }
+.manage-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.manage-row select, .manage-row input { flex: 1 1 160px; min-width: 0; width: auto; }
+.manage-row label { flex-basis: 100%; margin: 0; }
+.row-remove { background: none; border: 0; color: var(--red); cursor: pointer; padding: 2px 4px; }

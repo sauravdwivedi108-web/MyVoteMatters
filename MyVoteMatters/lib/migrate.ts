@@ -2,7 +2,7 @@ import type pg from 'pg';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-export const MIGRATIONS = ['000_roles.sql', '001_core.sql', '002_app.sql'];
+export const MIGRATIONS = ['000_roles.sql', '001_core.sql', '002_app.sql', '003_admin.sql'];
 
 /**
  * Applies any pending migrations, once, under an advisory lock so concurrent

@@ -72,9 +72,9 @@ export async function getElection(s: Session, id: string): Promise<ElectionDetai
 
 export async function listTeam(s: Session) {
   return withTenant(await db(), s.orgId, async (tx) => (await tx.query(
-    `SELECT u.email_normalized AS email, u.display_name AS name, m.role
+    `SELECT u.id, u.email_normalized AS email, u.display_name AS name, m.role
        FROM memberships m JOIN users u ON u.id = m.user_id ORDER BY m.role, u.email_normalized`)).rows as
-    { email: string; name: string | null; role: string }[]);
+    { id: string; email: string; name: string | null; role: string }[]);
 }
 
 /** Published results only; anything not yet published is indistinguishable from not found. */

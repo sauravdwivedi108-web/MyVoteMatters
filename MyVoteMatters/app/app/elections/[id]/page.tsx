@@ -4,6 +4,7 @@ import { requireSession, can } from '@/lib/auth';
 import { getElection } from '@/lib/queries';
 import {
   uploadRoll, saveBallot, submitElection, returnToDraft, approve, issueInvitations, openVoting, closeVoting, count, publish,
+  deleteElection, removeVoters,
 } from '@/lib/actions';
 import { StatusBadge, kindLabel, ist, units } from '@/components/Status';
 import { ActionForm, ActionButton, Submit } from '@/components/forms';
@@ -11,7 +12,7 @@ import { BallotBuilder } from '@/components/BallotBuilder';
 import { ApprovePanel, InvitePanel } from '@/components/Panels';
 import { Results, Reconciliation } from '@/components/Results';
 import {
-  Send, ShieldCheck, Link2, PlayCircle, Activity, KeyRound, BarChart3, Users, ListChecks, History, Globe, StopCircle,
+  Send, ShieldCheck, Link2, PlayCircle, Activity, KeyRound, BarChart3, Users, ListChecks, History, Globe, StopCircle, Trash2, X,
 } from 'lucide-react';
 
 export const metadata = { title: 'Election' };
@@ -45,6 +46,12 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
             {e.record_date && <span className="small muted">· Record date {String(e.record_date).slice(0, 10)}</span>}
           </div>
         </div>
+        {draft && manage && (
+          <ActionButton action={deleteElection.bind(null, e.id)} className="btn danger small"
+            confirm={`Delete "${e.title}" with its voter roll and ballot? This cannot be undone.`}>
+            <Trash2 size={16} aria-hidden="true" /> Delete election
+          </ActionButton>
+        )}
       </div>
 
       <ol className="stepper" aria-label="Progress">
@@ -175,10 +182,28 @@ export default async function ElectionPage({ params }: { params: Promise<{ id: s
             {e.roll.length > 0 && (
               <div className="table-wrap" style={{ maxHeight: 300, overflow: 'auto', marginTop: 12 }}>
                 <table>
-                  <thead><tr><th>Reference</th><th className="r">Units</th></tr></thead>
-                  <tbody>{e.roll.map((r) => <tr key={r.eligibility_ref}><td className="mono">{r.eligibility_ref}</td><td className="r num">{units(r.voting_units)}</td></tr>)}</tbody>
+                  <thead><tr><th>Reference</th><th className="r">Units</th>{draft && manage && <th aria-label="Remove" />}</tr></thead>
+                  <tbody>{e.roll.map((r) => (
+                    <tr key={r.eligibility_ref}><td className="mono">{r.eligibility_ref}</td><td className="r num">{units(r.voting_units)}</td>
+                      {draft && manage && (
+                        <td className="r">
+                          <ActionButton action={removeVoters.bind(null, e.id, r.eligibility_ref)} className="row-remove">
+                            <X size={16} aria-label={`Remove ${r.eligibility_ref}`} />
+                          </ActionButton>
+                        </td>
+                      )}
+                    </tr>
+                  ))}</tbody>
                 </table>
                 {e.eligible > e.roll.length && <p className="small muted">Showing the first {e.roll.length}.</p>}
+              </div>
+            )}
+            {draft && manage && e.eligible > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <ActionButton action={removeVoters.bind(null, e.id, undefined)} className="btn ghost small"
+                  confirm={`Remove all ${e.eligible} voters from this roll?`}>
+                  <Trash2 size={14} aria-hidden="true" /> Clear voter roll
+                </ActionButton>
               </div>
             )}
           </div>
