@@ -7,7 +7,7 @@ import { signup } from '@/lib/actions';
 import { getSession } from '@/lib/auth';
 import { hasDatabase } from '@/lib/pool';
 
-export const metadata = { title: 'Create a workspace' };
+export const metadata = { title: 'Create an admin account' };
 export const dynamic = 'force-dynamic';
 
 export default async function Signup() {
@@ -17,19 +17,19 @@ export default async function Signup() {
     <div className="auth-wrap">
       <div className="card auth-card">
         <Brand />
-        <h1>Create your workspace</h1>
-        <p className="muted">You become the owner. Add an approver afterwards so elections can be independently approved.</p>
+        <h1 style={{ fontSize: '1.5rem' }}>Create an admin account</h1>
+        <p className="muted">For the company, insolvency professional or firm running the vote. You become the admin with full control.</p>
         <ActionForm action={signup}>
-          <div className="field"><label htmlFor="org">Organisation name</label><input id="org" name="org" type="text" required placeholder="Acme Industries Ltd" /></div>
+          <div className="field"><label htmlFor="org">Company or firm name</label><input id="org" name="org" type="text" required placeholder="e.g. ABC Steel Ltd (under CIRP) or your firm" /></div>
           <div className="field"><label htmlFor="name">Your name</label><input id="name" name="name" type="text" autoComplete="name" required /></div>
           <div className="field"><label htmlFor="email">Work email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
           <div className="field">
             <label htmlFor="password">Password <span className="hint">at least 10 characters</span></label>
             <input id="password" name="password" type="password" autoComplete="new-password" minLength={10} required />
           </div>
-          <Submit className="btn block" pendingText="Creating…">Create workspace</Submit>
+          <Submit className="btn block" pendingText="Creating…">Create admin account</Submit>
         </ActionForm>
-        <p className="small muted" style={{ marginTop: 16 }}>Already have an account? <Link href="/login">Sign in</Link></p>
+        <p className="small muted" style={{ marginTop: 16 }}>Already have an account? <Link href="/login">Admin login</Link></p>
       </div>
     </div>
   );

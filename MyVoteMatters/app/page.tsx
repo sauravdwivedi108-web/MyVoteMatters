@@ -1,26 +1,25 @@
 import Link from 'next/link';
 import {
-  Fingerprint, Lock, UserCheck, Scale, Hourglass, History, FilePlus2, FileSpreadsheet, ListChecks,
-  ShieldCheck, Smartphone, BarChart3, ArrowRight, CheckCircle2,
+  Fingerprint, History, ListChecks, Users, KeyRound, Radio, BarChart3, ArrowRight, CheckCircle2, ShieldCheck,
+  Lock, FileSpreadsheet, Scale, UserRound, Building2, Landmark, Gavel, EyeOff,
 } from 'lucide-react';
 import { SiteNav, SiteFooter } from '@/components/SiteChrome';
 
-const guarantees = [
-  [Fingerprint, 'One vote per entitlement', 'Every folio or membership can vote once. Twelve simultaneous attempts still produce exactly one ballot, enforced by the database, not the browser.'],
-  [Lock, 'Secret ballot by design', 'The part of the system that knows who voted cannot read ballots, and the part that counts cannot see who voted. Administrators never see individual choices.'],
-  [UserCheck, 'Maker-checker approval', 'Elections are approved by a second person. Once approved, the voter roll, ballot and dates are locked.'],
-  [Scale, 'Reconciled results', 'Counting stops unless ballots match recorded votes by number and by voting units. Every count is hashed so it can be reproduced.'],
-  [Hourglass, 'No early results', 'Ballots cannot be read until voting closes. Turnout is visible while voting is open; choices are not.'],
-  [History, 'Tamper-evident audit', 'Every administrative step is written to a hash-chained log. Altering history breaks the chain and is detected.'],
+const steps = [
+  [ListChecks, 'Set the questions', 'Topics with options and full descriptions, how many choices each voter may make, and the approval threshold.'],
+  [Users, 'Add the voters', 'Shareholders or creditors with their voting weight. Paste straight from Excel; each % share is calculated for you.'],
+  [KeyRound, 'Issue voter IDs', 'One login ID and password per voter. Download the sheet or print slips to hand out.'],
+  [Radio, 'Voters vote', 'They log in on any phone, answer one question at a time, review and confirm. You watch turnout live.'],
+  [BarChart3, 'Results and report', 'Approval against the threshold, % of total share, who voted for what, and a CSV and printable report.'],
 ] as const;
 
-const steps = [
-  [FilePlus2, 'Create the election', 'AGM resolutions, board election or internal poll, with voting window and record date.'],
-  [FileSpreadsheet, 'Import the register', 'Paste folio numbers and voting units. Bad rows are reported, never guessed.'],
-  [ListChecks, 'Build the ballot', 'Ordinary and special resolutions, or candidates.'],
-  [ShieldCheck, 'Independent approval', 'A second person approves and receives the tally key. Everything locks.'],
-  [Smartphone, 'Voters vote', 'Each gets a private link that works on any phone. They review, confirm and keep a receipt.'],
-  [BarChart3, 'Count and publish', 'After closing, the key holder counts. Results reconcile, then publish.'],
+const controls = [
+  [Fingerprint, 'One ID, one vote', 'Enforced inside the database. Repeated or simultaneous attempts still record exactly one vote.'],
+  [Lock, 'Frozen before voting', 'Questions and the voter list are locked, with a fingerprint recorded, before anyone can vote.'],
+  [EyeOff, 'No early peeking', 'While voting is open you see who has voted, never what they chose. Choices unlock when voting ends.'],
+  [Scale, 'Weighted, threshold-based', 'Each vote carries the voter’s share. Approval is measured against the whole roll, e.g. 66% of the committee.'],
+  [History, 'Hash-chained audit log', 'Every action is chained to the one before it, so altering history is detected automatically.'],
+  [ShieldCheck, 'Passwords never stored', 'Voter passwords and admin passwords are kept only as one-way hashes.'],
 ] as const;
 
 export default function Home() {
@@ -30,50 +29,58 @@ export default function Home() {
         <SiteNav />
         <div className="hero-inner">
           <div>
-            <p className="eyebrow">Corporate e-voting</p>
-            <h1>AGM and shareholder voting your scrutinizer can trust.</h1>
+            <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
+            <h1>Every vote recorded, weighted and audit-ready.</h1>
             <p className="lead">
-              MyVoteMatters runs resolutions, board elections and member votes with verified eligibility,
-              weighted entitlements, secret ballots and results that reconcile before they are published.
+              MyVoteMatters lets an administrator put questions to shareholders and creditors of a company, issue each voter a secure login,
+              and produce results with a complete, verifiable record of who voted for what.
             </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-              <Link href="/signup" className="btn">Create your workspace <ArrowRight size={18} aria-hidden="true" /></Link>
-              <Link href="/security" className="btn secondary"><Lock size={16} aria-hidden="true" /> How the secret ballot works</Link>
+            <div className="hero-ctas">
+              <Link href="/login" className="btn"><Building2 size={18} aria-hidden="true" /> Admin login</Link>
+              <Link href="/voter" className="btn light"><UserRound size={18} aria-hidden="true" /> Voter login</Link>
             </div>
+            <p className="small" style={{ color: '#aab3cc', marginTop: 14 }}>New organisation? <Link href="/signup" style={{ color: '#fff' }}>Create an admin account</Link></p>
           </div>
           <div className="hero-card" aria-label="Example result">
-            <div className="small" style={{ color: '#c9cfe3' }}>AGM 2026 · Resolution 2 · Special resolution</div>
+            <div className="small" style={{ color: '#c9cfe3' }}>7th CoC meeting · Question 1 · needs 66% of total share</div>
             <div className="res">
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                <span>Alteration of Articles</span><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Passed</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, gap: 10 }}>
+                <span>Resolution plan by Applicant A</span><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span>
               </div>
-              <div className="meter" style={{ margin: '10px 0 6px' }}><span style={{ width: '82%' }} /></div>
-              <div className="small muted num">For 4,10,250 units · Against 90,100 · Abstain 12,000</div>
+              <div className="meter" style={{ margin: '10px 0 6px' }}><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
+              <div className="small muted num">78.75% of total voting share · 2 of 4 creditors</div>
             </div>
-            <div className="res small">
-              <strong>Reconciled:</strong> 1,284 ballots = 1,284 entitlements used · 5,12,350 units
+            <div className="res small hero-table">
+              <div><span>State Bank of India</span><span>56.25%</span><span>Applicant A</span></div>
+              <div><span>Axis Bank</span><span>22.50%</span><span>Applicant A</span></div>
+              <div><span>Edelweiss ARC</span><span>15.00%</span><span>Applicant B</span></div>
             </div>
+            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 12, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
           </div>
         </div>
       </div>
 
       <section className="section" id="how">
-        <h2>From notice to published result</h2>
-        <p className="muted">Six steps, each recorded in the audit trail.</p>
-        <ol className="steps with-icons">
-          {steps.map(([Icon, title, body]) => (
+        <p className="kicker">How it works</p>
+        <h2>From questions to a signed-off result in five steps</h2>
+        <ol className="flow big">
+          {steps.map(([Icon, title, body], i) => (
             <li key={title}>
-              <div className="step-icon" aria-hidden="true"><Icon size={20} /></div>
-              <strong>{title}</strong><br /><span className="muted small">{body}</span>
+              <span className="flow-n">{i + 1}</span>
+              <span className="flow-icon" aria-hidden="true"><Icon size={22} /></span>
+              <strong>{title}</strong>
+              <span>{body}</span>
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="section" style={{ paddingTop: 0 }}>
-        <h2>Guarantees built into the core</h2>
+      <section className="section band" id="trust">
+        <p className="kicker">Built for scrutiny</p>
+        <h2>Controls an auditor can check</h2>
+        <p className="muted" style={{ maxWidth: 680 }}>The rules are enforced by the database itself, not just the screen, so they hold even if someone bypasses the website.</p>
         <div className="features">
-          {guarantees.map(([Icon, title, body]) => (
+          {controls.map(([Icon, title, body]) => (
             <div className="feature" key={title}>
               <div className="icon" aria-hidden="true"><Icon size={20} /></div>
               <h3>{title}</h3>
@@ -83,17 +90,25 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-          <div>
-            <h2 style={{ marginBottom: 4 }}>Run a pilot election this week</h2>
-            <p className="muted" style={{ margin: 0 }}>
-              Start with an internal or non-binding vote. MyVoteMatters is not yet STQC-certified; legally significant
-              shareholder votes need certification and counsel review first.
-            </p>
+      <section className="section">
+        <div className="grid-2">
+          <div className="card role-card">
+            <span className="role-icon" aria-hidden="true"><Gavel size={22} /></span>
+            <h3>For administrators</h3>
+            <p className="muted small">Resolution professionals, company secretaries and liquidators set up the meeting, issue IDs, run the vote and download the report.</p>
+            <Link href="/login" className="btn">Admin login <ArrowRight size={18} aria-hidden="true" /></Link>
           </div>
-          <Link href="/signup" className="btn">Get started</Link>
+          <div className="card role-card">
+            <span className="role-icon teal" aria-hidden="true"><UserRound size={22} /></span>
+            <h3>For voters</h3>
+            <p className="muted small">Shareholders and creditors log in with the voter ID and password from the administrator. No app or account needed.</p>
+            <Link href="/voter" className="btn teal">Voter login <ArrowRight size={18} aria-hidden="true" /></Link>
+          </div>
         </div>
+        <p className="small muted" style={{ marginTop: 22, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <FileSpreadsheet size={16} aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} />
+          Pilot software: not yet independently certified. Confirm voting thresholds and procedure for each proceeding with your legal advisor.
+        </p>
       </section>
       <SiteFooter />
     </>

@@ -7,7 +7,7 @@ import { Users, UserPlus, ShieldCheck, KeyRound, Trash2 } from 'lucide-react';
 export const metadata = { title: 'Team' };
 
 const ROLES: [string, string, string][] = [
-  ['owner', 'Owner', 'Everything, including team management'],
+  ['owner', 'Admin', 'Full control: meetings, voters, voter IDs, team and access'],
   ['election_admin', 'Election admin', 'Creates elections, imports voters, builds ballots, sends links, opens and closes voting, counts'],
   ['approver', 'Approver', 'Independently approves elections and publishes results'],
   ['scrutinizer', 'Scrutinizer', 'Counts with the tally key and publishes results'],

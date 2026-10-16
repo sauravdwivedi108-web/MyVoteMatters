@@ -87,6 +87,24 @@ export async function getOpenVoteReport(s: Session, electionId: string): Promise
     `SELECT eligibility_ref, voting_units::text, voted, cast_at, choices FROM vs.open_vote_report($1)`, [electionId])).rows);
 }
 
+export type MeetingVoter = OpenVoteRow & { login_id: string | null; has_login: boolean };
+
+/** Every voter in a meeting with login ID and voting status; choices only once voting has closed. */
+export async function getMeetingVoters(s: Session, electionId: string): Promise<MeetingVoter[]> {
+  return withTenant(await db(), s.orgId, async (tx) => (await tx.query(
+    `SELECT r.eligibility_ref, r.voting_units::text, r.voted, r.cast_at, r.choices, l.login_id, c.id IS NOT NULL AS has_login
+       FROM vs.open_vote_report($1) r
+       JOIN voter_eligibility e ON e.election_id = $1 AND e.eligibility_ref = r.eligibility_ref
+       LEFT JOIN voter_logins l ON l.eligibility_id = e.id
+       LEFT JOIN voting_credentials c ON c.eligibility_id = e.id AND c.revoked_at IS NULL`, [electionId])).rows);
+}
+
+/** Recomputes the organisation's hash-chained audit log; null when every link verifies. */
+export async function auditChainBreak(s: Session): Promise<string | null> {
+  return withTenant(await db(), s.orgId, async (tx) =>
+    (await tx.query('SELECT vs.verify_audit_chain(vs.current_org()) AS broken')).rows[0].broken);
+}
+
 /** Published results only; anything not yet published is indistinguishable from not found. */
 export async function getPublishedResult(orgId: string, electionId: string) {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

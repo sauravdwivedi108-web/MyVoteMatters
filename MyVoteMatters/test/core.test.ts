@@ -362,6 +362,62 @@ test('creditor vote: a consumption without a named record is refused at commit',
     `SELECT * FROM vs.cast_ballot($1, $2, 'tag', 'receipt', 1, '\\x00')`, [electionId, credentialHash(c.secret)])), /open_vote_missing/);
 });
 
+test('meeting: single admin locks, voters log in with ID and password, named results count against the whole roll', async () => {
+  const { issueVoterLogins, resolveVoterLogin } = await import('../lib/core/voterLogins');
+  const { countAgenda } = await import('../lib/core/agendaResults');
+  const org = await seedOrg(h.admin, 'meet');
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'CoC 3', kind: 'creditor_vote', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000),
+  });
+  await importRoll(h.app, org.orgId, org.maker, electionId, [
+    { eligibilityRef: 'Bank A', votingUnits: 700 }, { eligibilityRef: 'Bank B', votingUnits: 200 }, { eligibilityRef: 'Bank C', votingUnits: 100 }]);
+  const def: BallotDefinition = { type: 'agenda', items: [{ id: 'A1', title: 'Plan', description: '', minChoices: 1, maxChoices: 1, thresholdPct: 66,
+    options: [{ id: 'O1', name: 'For' }, { id: 'O2', name: 'Against' }] }] };
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, def);
+  // IDs cannot be issued before the meeting is locked.
+  await assert.rejects(issueVoterLogins(h.app, org.orgId, org.maker, electionId), /forbidden/);
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  await approveElection(h.app, org.orgId, org.maker, electionId); // same person: allowed for creditor votes only
+  const logins = await issueVoterLogins(h.app, org.orgId, org.maker, electionId);
+  assert.equal(logins.length, 3);
+  assert.match(logins[0].loginId, /^MV-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  const byName = Object.fromEntries(logins.map((l) => [l.eligibilityRef, l]));
+
+  assert.equal(await resolveVoterLogin(h.app, byName['Bank A'].loginId, 'wrong-pass1'), null);
+  // Reset gives a new password with the same ID; the old one stops working.
+  const [reset] = await issueVoterLogins(h.app, org.orgId, org.maker, electionId, 'Bank B');
+  assert.equal(reset.loginId, byName['Bank B'].loginId);
+  assert.equal(await resolveVoterLogin(h.app, byName['Bank B'].loginId, byName['Bank B'].password), null);
+  byName['Bank B'] = reset;
+
+  await transition(h.app, org.orgId, org.maker, electionId, 'open');
+  const vote = async (name: string, pick: string) => {
+    const t = await resolveVoterLogin(h.app, byName[name].loginId.toLowerCase(), byName[name].password);
+    assert.ok(t, `${name} can log in`);
+    return castVote(h.app, org.orgId, { electionId, credentialSecret: t!.secret, choices: { A1: pick } });
+  };
+  assert.equal((await vote('Bank A', 'O1')).status, 'accepted');
+  assert.equal((await vote('Bank B', 'O2')).status, 'accepted');
+  assert.equal((await vote('Bank A', 'O2')).status, 'rejected');
+  await transition(h.app, org.orgId, org.maker, electionId, 'closed');
+
+  const rows = await withTenant(h.app, org.orgId, async (tx) => (await tx.query('SELECT * FROM vs.open_vote_report($1)', [electionId])).rows);
+  const ballots = rows.filter((r) => r.choices).map((r) => ({ units: String(r.voting_units), choices: r.choices }));
+  const [r] = countAgenda(def as never, ballots, '1000');
+  assert.deepEqual(r.options.map((o) => [o.id, o.units, o.pctOfTotal]), [['O1', '700', 70], ['O2', '200', 20]]);
+  assert.deepEqual(r.selected, ['O1']);
+});
+
+test('secret-ballot elections still need a second person to approve', async () => {
+  const org = await seedOrg(h.admin, 'mc');
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'AGM', kind: 'agm_resolutions', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000) });
+  await importRoll(h.app, org.orgId, org.maker, electionId, [{ eligibilityRef: 'F1', votingUnits: 1 }]);
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, agmBallot);
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  await assert.rejects(approveElection(h.app, org.orgId, org.maker, electionId), /maker_checker/);
+});
+
 test('roll import reports bad rows instead of guessing', async () => {
   const org = await seedOrg(h.admin, 'import');
   const electionId = await createElection(h.app, org.orgId, org.maker, {

@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Vote, Users } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, ShieldCheck } from 'lucide-react';
 
-const ICONS = { overview: LayoutDashboard, elections: Vote, team: Users };
+const ICONS = { overview: LayoutDashboard, elections: CalendarCheck, team: ShieldCheck };
 
 export function NavLink({ href, children, exact, icon }:
   { href: string; children: React.ReactNode; exact?: boolean; icon: keyof typeof ICONS }) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { picksLabel, splitPicks, type BallotDefinition, type Choices } from '@/lib/core/ballot';
 import { Brand } from '@/components/Brand';
-import { Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
+import { LogOut, Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
 
 type Ballot = {
   title: string; org_name: string; status: string; starts_at: string; ends_at: string;
@@ -28,12 +28,14 @@ export function VoterApp() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const t = decodeURIComponent(window.location.hash.slice(1));
-    if (!t) { setError('Open the voting link you were sent. It contains your private code.'); return; }
+    let t = decodeURIComponent(window.location.hash.slice(1));
+    if (t) { try { sessionStorage.setItem('mvm_voter', t); } catch { /* private mode */ } history.replaceState(null, '', '/vote'); }
+    else { try { t = sessionStorage.getItem('mvm_voter') ?? ''; } catch { /* private mode */ } }
+    if (!t) { window.location.replace('/voter'); return; }
     setToken(t);
     fetch('/api/vote/ballot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: t }) })
       .then(async (r) => {
-        if (!r.ok) throw new Error(r.status === 429 ? 'Too many attempts. Wait a minute and reload.' : 'This voting link is not valid. Check you opened the full link.');
+        if (!r.ok) throw new Error(r.status === 429 ? 'Too many attempts. Wait a minute and reload.' : 'This sign-in is no longer valid. Log in again with your voter ID and password.');
         return r.json();
       })
       .then((b: Ballot) => {
@@ -84,7 +86,13 @@ export function VoterApp() {
 
   const shell = (body: React.ReactNode) => (
     <div className="voter">
-      <div className="voter-top"><Brand href="/vote" />{ballot && <span className="small muted">{ballot.org_name}</span>}</div>
+      <div className="voter-top"><Brand href="/vote" />
+        <span className="voter-top-right">{ballot && <span className="small muted">{ballot.org_name}</span>}
+          <button className="btn ghost small" onClick={() => { try { sessionStorage.removeItem('mvm_voter'); } catch { /* ignore */ } window.location.href = '/voter'; }}>
+            <LogOut size={16} aria-hidden="true" /> Log out
+          </button>
+        </span>
+      </div>
       {ballot && (ballot.kind === 'creditor_vote'
         ? <div className="notice warn small h-icon" style={{ marginTop: -8 }}><Eye size={16} aria-hidden="true" /> Open ballot: your name and your choices are recorded and shown to the administrator (resolution professional) after voting closes.</div>
         : <p className="small muted h-icon" style={{ gap: 6, marginTop: -8 }}><Lock size={14} aria-hidden="true" /> Secret ballot: nobody, including the company, can see how you vote.</p>)}
@@ -93,7 +101,7 @@ export function VoterApp() {
     </div>
   );
 
-  if (error && !ballot) return shell(<div className="notice error" role="alert">{error}</div>);
+  if (error && !ballot) return shell(<><div className="notice error" role="alert">{error}</div><Link className="btn secondary" href="/voter">Go to voter login</Link></>);
   if (!ballot || stage === 'loading') return shell(<p className="muted" aria-live="polite">Loading your ballot…</p>);
 
   if (stage === 'done' && receipt) {

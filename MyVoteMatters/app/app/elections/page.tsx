@@ -1,21 +1,21 @@
 import Link from 'next/link';
 import { requireSession, can } from '@/lib/auth';
 import { listElections } from '@/lib/queries';
-import { ElectionTable } from '@/components/ElectionTable';
+import { MeetingCards } from '@/components/meeting/MeetingCards';
 import { Plus } from 'lucide-react';
 
-export const metadata = { title: 'Elections' };
+export const metadata = { title: 'Meetings' };
 
-export default async function Elections() {
+export default async function Meetings() {
   const s = await requireSession();
-  const elections = await listElections(s);
+  const meetings = await listElections(s);
   return (
     <>
       <div className="page-head">
-        <h1>Elections</h1>
-        {can(s, 'manage') && <Link className="btn" href="/app/elections/new"><Plus size={18} aria-hidden="true" /> New election</Link>}
+        <div><h1>Voting meetings</h1><p className="muted">Each meeting has its own questions, voters and voter IDs.</p></div>
+        {can(s, 'manage') && <Link className="btn" href="/app/elections/new"><Plus size={18} aria-hidden="true" /> New voting meeting</Link>}
       </div>
-      <ElectionTable elections={elections} canCreate={can(s, 'manage')} />
+      <MeetingCards meetings={meetings} canCreate={can(s, 'manage')} />
     </>
   );
 }
