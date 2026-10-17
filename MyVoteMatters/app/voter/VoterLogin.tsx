@@ -41,7 +41,7 @@ export function VoterLogin() {
             <div className="field">
               <label htmlFor="loginId">Voter ID</label>
               <input id="loginId" name="loginId" type="text" required autoComplete="username" autoCapitalize="characters"
-                placeholder="MV-XXXX-XXXX" className="mono" style={{ fontSize: '1rem', letterSpacing: '0.05em' }} />
+                placeholder="e.g. Gauredit6" className="mono" style={{ fontSize: '1rem', letterSpacing: '0.05em' }} />
             </div>
             <div className="field">
               <label htmlFor="password">Password</label>

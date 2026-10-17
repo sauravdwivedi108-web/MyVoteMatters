@@ -11,10 +11,25 @@ const ID_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const PW_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
 const pick = (chars: string, n: number) => Array.from({ length: n }, () => chars[randomInt(chars.length)]).join('');
 
-/** e.g. MV-7K2M-9QPA */
-export const newLoginId = () => `MV-${pick(ID_CHARS, 4)}-${pick(ID_CHARS, 4)}`;
-/** 10 characters from a 31-letter alphabet (about 49 bits), shown once. */
-export const newVoterPassword = () => `${pick(PW_CHARS, 5)}-${pick(PW_CHARS, 5)}`;
+const letters = (v: string) => v.normalize('NFKD').replace(/[^A-Za-z]/g, '');
+const cap = (v: string) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+/** The company part: drops "(under CIRP)"-style notes and words like Ltd or Pvt before taking the last 4 letters. */
+const companyPart = (org: string) => {
+  const core = org.replace(/\(.*?\)/g, ' ').replace(/\b(ltd|limited|pvt|private|llp|inc|co|company|corp)\b\.?/gi, ' ');
+  return (letters(core) || letters(org) || 'vote').slice(-4).toLowerCase();
+};
+const namePart = (name: string) => cap((letters(name) || 'Voter').slice(0, 4));
+const hour12 = (d: Date) => {
+  const h = Number(new Intl.DateTimeFormat('en-IN', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }).format(d)) % 24;
+  return h % 12 === 0 ? 12 : h % 12;
+};
+
+/** e.g. voter "Gaurav", company "MakeMyEdit", issued at 6 am IST: "Gauredit6". */
+export const newLoginId = (name: string, org: string, at = new Date()) => `${namePart(name)}${companyPart(org)}${hour12(at)}`;
+/** e.g. "Gaur" + 5 random letters or digits: "Gaur7k2m9". Typed case-insensitively. */
+export const newVoterPassword = (name: string) => `${namePart(name)}${pick(PW_CHARS, 5)}`;
+/** IDs are stored upper-case and matched without regard to case; shown as "Gauredit6". */
+export const displayLoginId = (id: string) => /^MV-/.test(id) ? id : cap(id);
 
 export const normaliseLoginId = (v: string) => v.trim().toUpperCase().replace(/\s+/g, '');
 
@@ -24,7 +39,7 @@ export const normaliseLoginId = (v: string) => v.trim().toUpperCase().replace(/\
  * as for a voting link. The result has the 43-character shape of a link secret.
  */
 export async function voterLoginSecret(loginId: string, password: string) {
-  return (await scrypt(password.trim(), `myvotematters-voter:${normaliseLoginId(loginId)}`, 32)).toString('base64url');
+  return (await scrypt(password.trim().toLowerCase(), `myvotematters-voter:${normaliseLoginId(loginId)}`, 32)).toString('base64url');
 }
 
 export type IssuedLogin = { eligibilityRef: string; votingUnits: string; loginId: string; password: string };
@@ -41,6 +56,7 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
     if (!el || !['approved', 'open'].includes(el.status)) {
       throw new Error('forbidden: voter IDs can be created once the meeting is locked and until voting closes');
     }
+    const { rows: [org] } = await tx.query(`SELECT name FROM organizations WHERE id = vs.current_org()`);
     if (eligibilityRef) {
       await tx.query(
         `UPDATE voting_credentials c SET revoked_at = now() FROM voter_eligibility e
@@ -57,19 +73,21 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
     for (const r of rows) {
       let loginId: string = r.login_id;
       if (!loginId) {
-        for (;;) {
-          loginId = newLoginId();
+        const base = normaliseLoginId(newLoginId(r.eligibility_ref, org.name));
+        for (let n = 0; ; n++) {
+          // A clash (same name start, company and hour) gets a letter: GAUREDIT6, GAUREDIT6B, GAUREDIT6C...
+          loginId = n === 0 ? base : n < 26 ? base + String.fromCharCode(65 + n) : `${base}${pick(ID_CHARS, 3)}`;
           const ins = await tx.query(
             `INSERT INTO voter_logins (login_id, organization_id, election_id, eligibility_id)
              VALUES ($1, vs.current_org(), $2, $3) ON CONFLICT (login_id) DO NOTHING`, [loginId, electionId, r.id]);
           if (ins.rowCount) break;
         }
       }
-      const password = newVoterPassword();
+      const password = newVoterPassword(r.eligibility_ref);
       await tx.query(
         `INSERT INTO voting_credentials (organization_id, election_id, eligibility_id, credential_hash)
          VALUES (vs.current_org(), $1, $2, $3)`, [electionId, r.id, credentialHash(await voterLoginSecret(loginId, password))]);
-      issued.push({ eligibilityRef: r.eligibility_ref, votingUnits: r.voting_units, loginId, password });
+      issued.push({ eligibilityRef: r.eligibility_ref, votingUnits: r.voting_units, loginId: displayLoginId(loginId), password });
     }
     await audit(tx, orgId, `user:${actorId}`, eligibilityRef ? 'voter.password_reset' : 'voter_ids.issued',
       `election:${electionId}`, eligibilityRef ? { voter: eligibilityRef } : { count: issued.length });
@@ -80,7 +98,7 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
 /** Checks a voter's login ID and password. Returns the voting token parts, or null. */
 export async function resolveVoterLogin(pool: pg.Pool, loginId: string, password: string) {
   const id = normaliseLoginId(loginId);
-  if (!/^MV-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(id) || !password.trim()) return null;
+  if (!/^[A-Z0-9-]{3,32}$/.test(id) || !password.trim()) return null;
   const secret = await voterLoginSecret(id, password);
   const found = await withTenant(pool, null, async (tx) => (await tx.query('SELECT * FROM vs.voter_login_lookup($1)', [id])).rows[0]);
   if (!found) return null;

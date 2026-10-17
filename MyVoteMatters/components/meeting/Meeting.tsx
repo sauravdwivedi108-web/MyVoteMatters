@@ -7,6 +7,7 @@ import { saveBallot, uploadRoll, removeVoters, deleteElection } from '@/lib/acti
 import { addVoter, lockAndIssueIds, resetVoterPassword, issueMissingIds, startVoting, endVoting, extendVoting } from '@/lib/meetingActions';
 import { picksLabel, type AgendaBallot } from '@/lib/core/ballot';
 import { countAgenda } from '@/lib/core/agendaResults';
+import { displayLoginId } from '@/lib/core/voterLogins';
 import { ActionForm, ActionButton, Submit } from '../forms';
 import { BallotBuilder } from '../BallotBuilder';
 import { OpenVoteReport } from '../OpenVoteReport';
@@ -108,8 +109,8 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
             {voters.length > voted.length && (
               <details className="pending-list">
                 <summary>Not voted yet ({voters.length - voted.length})</summary>
-                <ul>{voters.filter((v) => !v.voted).map((v) => <li key={v.eligibility_ref}><span>{v.eligibility_ref}</span><span className="small muted">{v.login_id ?? 'no ID'} · {share(BigInt(v.voting_units), total)}</span></li>)}</ul>
-                <CopyButton label="Copy reminder list" text={`Reminder: please vote in "${e.title}" before ${ist(e.ends_at)}. Log in at ${loginUrl}\n\n` + voters.filter((v) => !v.voted).map((v) => `${v.eligibility_ref} (${v.login_id ?? 'no ID'})`).join('\n')} />
+                <ul>{voters.filter((v) => !v.voted).map((v) => <li key={v.eligibility_ref}><span>{v.eligibility_ref}</span><span className="small muted">{v.login_id ? displayLoginId(v.login_id) : 'no ID'} · {share(BigInt(v.voting_units), total)}</span></li>)}</ul>
+                <CopyButton label="Copy reminder list" text={`Reminder: please vote in "${e.title}" before ${ist(e.ends_at)}. Log in at ${loginUrl}\n\n` + voters.filter((v) => !v.voted).map((v) => `${v.eligibility_ref} (${v.login_id ? displayLoginId(v.login_id) : 'no ID'})`).join('\n')} />
               </details>
             )}
             {manage && <ExtendForm id={e.id} endsAt={e.ends_at} />}</Next>}
@@ -225,7 +226,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
                         <td><strong>{v.eligibility_ref}</strong></td>
                         <td className="r num">{units(v.voting_units)}</td>
                         <td className="r num">{share(v.voting_units, total)}</td>
-                        {!draft && <td className="mono">{v.login_id ?? '—'}</td>}
+                        {!draft && <td className="mono">{v.login_id ? displayLoginId(v.login_id) : '—'}</td>}
                         {!draft && <td>{v.voted ? <span className="badge open">Voted</span> : <span className="badge draft">Not yet</span>}</td>}
                         <td className="r">
                           {draft && manage && (

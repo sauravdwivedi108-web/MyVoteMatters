@@ -380,8 +380,18 @@ test('meeting: single admin locks, voters log in with ID and password, named res
   await approveElection(h.app, org.orgId, org.maker, electionId); // same person: allowed for creditor votes only
   const logins = await issueVoterLogins(h.app, org.orgId, org.maker, electionId);
   assert.equal(logins.length, 3);
-  assert.match(logins[0].loginId, /^MV-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  // Name (4) + company (last 4) + hour; same-name clashes get a letter. Password: name (4) + 5 letters or digits.
+  for (const l of logins) {
+    assert.match(l.loginId, /^Bank[a-z]{1,4}\d{1,2}[a-z]?$/);
+    assert.match(l.password, /^Bank[a-z2-9]{5}$/);
+  }
+  assert.equal(new Set(logins.map((l) => l.loginId.toLowerCase())).size, 3);
+  const { newLoginId } = await import('../lib/core/voterLogins');
+  assert.equal(newLoginId('Gaurav', 'makemyedit', new Date('2026-10-17T06:10:00+05:30')), 'Gauredit6');
+  assert.equal(newLoginId('Gaurav', 'MakeMyEdit Pvt Ltd (under CIRP)', new Date('2026-10-17T18:10:00+05:30')), 'Gauredit6');
   const byName = Object.fromEntries(logins.map((l) => [l.eligibilityRef, l]));
+  // ID and password are not case-sensitive for the voter.
+  assert.ok(await resolveVoterLogin(h.app, byName['Bank C'].loginId.toUpperCase(), byName['Bank C'].password.toUpperCase()));
 
   assert.equal(await resolveVoterLogin(h.app, byName['Bank A'].loginId, 'wrong-pass1'), null);
   // Reset gives a new password with the same ID; the old one stops working.
