@@ -95,15 +95,26 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
   });
 }
 
-/** Checks a voter's login ID and password. Returns the voting token parts, or null. */
-export async function resolveVoterLogin(pool: pg.Pool, loginId: string, password: string) {
+export type VoterLoginCheck =
+  | { ok: true; orgId: string; electionId: string; secret: string }
+  | { ok: false; reason: 'unknown_id' | 'bad_password' };
+
+/** Checks a voter's login ID and password, saying which of the two is wrong. */
+export async function checkVoterLogin(pool: pg.Pool, loginId: string, password: string): Promise<VoterLoginCheck> {
   const id = normaliseLoginId(loginId);
-  if (!/^[A-Z0-9-]{3,32}$/.test(id) || !password.trim()) return null;
-  const secret = await voterLoginSecret(id, password);
+  if (!/^[A-Z0-9-]{3,32}$/.test(id)) return { ok: false, reason: 'unknown_id' };
   const found = await withTenant(pool, null, async (tx) => (await tx.query('SELECT * FROM vs.voter_login_lookup($1)', [id])).rows[0]);
-  if (!found) return null;
+  if (!found) return { ok: false, reason: 'unknown_id' };
+  if (!password.trim()) return { ok: false, reason: 'bad_password' };
+  const secret = await voterLoginSecret(id, password);
   const ok = await withTenant(pool, found.organization_id, async (tx) => (await tx.query(
     'SELECT election_id FROM vs.credential_context($1)', [credentialHash(secret)])).rows[0]);
-  if (!ok || ok.election_id !== found.election_id) return null;
-  return { orgId: found.organization_id as string, electionId: found.election_id as string, secret };
+  if (!ok || ok.election_id !== found.election_id) return { ok: false, reason: 'bad_password' };
+  return { ok: true, orgId: found.organization_id as string, electionId: found.election_id as string, secret };
+}
+
+/** Checks a voter's login ID and password. Returns the voting token parts, or null. */
+export async function resolveVoterLogin(pool: pg.Pool, loginId: string, password: string) {
+  const r = await checkVoterLogin(pool, loginId, password);
+  return r.ok ? { orgId: r.orgId, electionId: r.electionId, secret: r.secret } : null;
 }

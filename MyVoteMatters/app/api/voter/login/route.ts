@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/pool';
-import { resolveVoterLogin, normaliseLoginId } from '@/lib/core/voterLogins';
+import { checkVoterLogin, normaliseLoginId } from '@/lib/core/voterLogins';
 import { throttle, clientKey } from '@/lib/voter';
 
 export const dynamic = 'force-dynamic';
@@ -14,8 +14,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many attempts. Wait a minute and try again.' }, { status: 429 });
   }
   try {
-    const r = await resolveVoterLogin(await db(), loginId, password);
-    if (!r) return NextResponse.json({ error: 'That voter ID and password do not match. Check them on the sheet you were given.' }, { status: 401 });
+    const r = await checkVoterLogin(await db(), loginId, password);
+    if (!r.ok) {
+      console.warn('voter login refused', r.reason, normaliseLoginId(loginId));
+      return NextResponse.json({ error: r.reason === 'unknown_id'
+        ? `No voter ID "${loginId.trim()}" was found. Check the ID on your slip: it looks like Gauredit6 (letters, then a number). Admins log in on the Admin login page.`
+        : 'The voter ID is right but the password does not match. Check the password on your slip, or ask the administrator to reset it.' }, { status: 401 });
+    }
     return NextResponse.json({ token: `${r.orgId}.${r.electionId}.${r.secret}` }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('voter login failed', (err as Error).message);
