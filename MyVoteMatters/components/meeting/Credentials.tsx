@@ -5,7 +5,7 @@ import type { FormState } from '@/lib/actions';
 import type { IssuedLogin } from '@/lib/core/voterLogins';
 import { csvCell, download } from '../Panels';
 import { Notice } from '../forms';
-import { Download, KeyRound, Lock, Printer, RotateCcw } from 'lucide-react';
+import { Copy, Check, Download, KeyRound, Lock, Printer, RotateCcw } from 'lucide-react';
 
 type Result = FormState & { logins?: IssuedLogin[] };
 
@@ -101,4 +101,15 @@ export function IssueMissing({ action, meeting, org, loginUrl }: { action: () =>
 
 export function PrintButton({ label = 'Print / save as PDF' }: { label?: string }) {
   return <button className="btn secondary small no-print" onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> {label}</button>;
+}
+
+export function CopyButton({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button type="button" className="btn secondary small" onClick={async () => {
+      try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 2000); } catch { /* clipboard blocked */ }
+    }}>
+      {done ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />} {done ? 'Copied' : label}
+    </button>
+  );
 }

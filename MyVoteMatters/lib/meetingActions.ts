@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from './pool';
-import { createElection, importRoll, submitForApproval, approveElection, transition } from './core/elections';
+import { createElection, importRoll, submitForApproval, approveElection, transition, extendVoting as extendCore } from './core/elections';
 import { issueVoterLogins, type IssuedLogin } from './core/voterLogins';
 import { requirePermission, requireSession } from './auth';
 import { friendlyError } from './errors';
@@ -107,3 +107,20 @@ async function move(electionId: string, to: 'open' | 'closed'): Promise<FormStat
 }
 export async function startVoting(electionId: string) { return move(electionId, 'open'); }
 export async function endVoting(electionId: string) { return move(electionId, 'closed'); }
+
+export async function extendVoting(electionId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const endsAt = istDate(str(fd, 'ends_at'));
+  if (Number.isNaN(endsAt.getTime())) return { error: 'Choose a new closing date and time.' };
+  if (endsAt.getTime() <= Date.now()) return { error: 'The new closing time must be in the future.' };
+  try {
+    requirePermission(s, 'manage');
+    await extendCore(await db(), s.orgId, s.userId, electionId, endsAt);
+  } catch (err) {
+    const msg = String((err as Error).message ?? '');
+    if (msg.includes('config_frozen')) return { error: 'The closing time can only be moved later, while voting has not ended.' };
+    return { error: friendlyError(err) };
+  }
+  revalidatePath(`/app/elections/${electionId}`);
+  return { ok: 'Closing time extended. Voters see the new time straight away.' };
+}

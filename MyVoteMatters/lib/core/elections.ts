@@ -138,3 +138,14 @@ export async function transition(pool: pg.Pool, orgId: string, actorId: string, 
     await audit(tx, orgId, `user:${actorId}`, `election.${to}`, `election:${electionId}`);
   });
 }
+
+/** Moves the closing time of a creditor vote later, before it has closed. The database rejects anything else. */
+export async function extendVoting(pool: pg.Pool, orgId: string, actorId: string, electionId: string, endsAt: Date) {
+  return withTenant(pool, orgId, async (tx) => {
+    const { rows: [old] } = await tx.query(`SELECT ends_at FROM elections WHERE id = $1`, [electionId]);
+    if (!old) throw new DomainError('not_found');
+    await tx.query(`UPDATE elections SET ends_at = $2 WHERE id = $1`, [electionId, endsAt]);
+    await audit(tx, orgId, `user:${actorId}`, 'election.extended', `election:${electionId}`,
+      { from: new Date(old.ends_at).toISOString(), to: endsAt.toISOString() });
+  });
+}

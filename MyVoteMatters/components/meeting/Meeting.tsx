@@ -4,17 +4,17 @@ import type { Session } from '@/lib/auth';
 import { can } from '@/lib/auth';
 import { getMeetingVoters, auditChainBreak, type ElectionDetail } from '@/lib/queries';
 import { saveBallot, uploadRoll, removeVoters, deleteElection } from '@/lib/actions';
-import { addVoter, lockAndIssueIds, resetVoterPassword, issueMissingIds, startVoting, endVoting } from '@/lib/meetingActions';
+import { addVoter, lockAndIssueIds, resetVoterPassword, issueMissingIds, startVoting, endVoting, extendVoting } from '@/lib/meetingActions';
 import { picksLabel, type AgendaBallot } from '@/lib/core/ballot';
 import { countAgenda } from '@/lib/core/agendaResults';
 import { ActionForm, ActionButton, Submit } from '../forms';
 import { BallotBuilder } from '../BallotBuilder';
 import { OpenVoteReport } from '../OpenVoteReport';
 import { ist, units } from '../Status';
-import { LockPanel, ResetPassword, IssueMissing, PrintButton } from './Credentials';
+import { LockPanel, ResetPassword, IssueMissing, PrintButton, CopyButton } from './Credentials';
 import {
   ListChecks, Users, KeyRound, Radio, BarChart3, History, PlayCircle, StopCircle, ShieldCheck, ShieldAlert, Trash2, X,
-  CheckCircle2, CircleDot, Circle, ArrowRight, Link2, UserPlus, Upload, Scale, Clock, LayoutDashboard,
+  CheckCircle2, CircleDot, Circle, ArrowRight, Link2, UserPlus, Upload, Scale, Clock, LayoutDashboard, CalendarClock,
 } from 'lucide-react';
 
 export const MEETING_STATUS: Record<string, [string, string]> = {
@@ -104,7 +104,15 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
           {e.status === 'open' && <Next icon={Radio} title="Voting is live"
             text={`${voted.length} of ${voters.length} voters have voted, holding ${share(votedUnits, total)} of the total voting share. Results unlock when you end voting.`}>
             <ActionButton action={endVoting.bind(null, e.id)} className="btn danger" confirm="End voting now? Nobody will be able to vote after this, and results will be shown.">
-              <StopCircle size={18} aria-hidden="true" /> End voting</ActionButton></Next>}
+              <StopCircle size={18} aria-hidden="true" /> End voting</ActionButton>
+            {voters.length > voted.length && (
+              <details className="pending-list">
+                <summary>Not voted yet ({voters.length - voted.length})</summary>
+                <ul>{voters.filter((v) => !v.voted).map((v) => <li key={v.eligibility_ref}><span>{v.eligibility_ref}</span><span className="small muted">{v.login_id ?? 'no ID'} · {share(BigInt(v.voting_units), total)}</span></li>)}</ul>
+                <CopyButton label="Copy reminder list" text={`Reminder: please vote in "${e.title}" before ${ist(e.ends_at)}. Log in at ${loginUrl}\n\n` + voters.filter((v) => !v.voted).map((v) => `${v.eligibility_ref} (${v.login_id ?? 'no ID'})`).join('\n')} />
+              </details>
+            )}
+            {manage && <ExtendForm id={e.id} endsAt={e.ends_at} />}</Next>}
           {closed && <Next icon={BarChart3} title="Voting has closed. Results are final."
             text={`${voted.length} of ${voters.length} voters voted, holding ${share(votedUnits, total)} of the total voting share.`}>
             <Link className="btn" href="?tab=results">See results <ArrowRight size={18} aria-hidden="true" /></Link></Next>}
@@ -367,5 +375,22 @@ function MeetingResults({ def, voters, total }: { def: AgendaBallot; voters: { v
         </div>
       ))}
     </div>
+  );
+}
+
+const toIstInput = (d: string | Date) => new Date(new Date(d).getTime() + 5.5 * 3600_000).toISOString().slice(0, 16);
+
+function ExtendForm({ id, endsAt }: { id: string; endsAt: string | Date }) {
+  return (
+    <details className="pending-list">
+      <summary className="h-icon" style={{ gap: 6 }}><CalendarClock size={16} aria-hidden="true" /> Extend closing time</summary>
+      <ActionForm action={extendVoting.bind(null, id)}>
+        <div className="field">
+          <label htmlFor="ext_ends">New closing time <span className="hint">IST, later than {ist(endsAt)}</span></label>
+          <input id="ext_ends" name="ends_at" type="datetime-local" required defaultValue={toIstInput(new Date(new Date(endsAt).getTime() + 24 * 3600_000))} />
+        </div>
+        <Submit className="btn secondary" pendingText="Saving…"><CalendarClock size={16} aria-hidden="true" /> Extend voting</Submit>
+      </ActionForm>
+    </details>
   );
 }

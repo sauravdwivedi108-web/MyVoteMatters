@@ -447,3 +447,22 @@ test('audit log is hash-chained and tampering is detected', async () => {
   const bad = await withTenant(h.app, e.orgId, (tx) => tx.query('SELECT vs.verify_audit_chain($1) AS bad', [e.orgId]));
   assert.notEqual(bad.rows[0].bad, null);
 });
+
+test('meeting: closing time can only be extended, and not after voting ends', async () => {
+  const { extendVoting } = await import('../lib/core/elections');
+  const org = await seedOrg(h.admin, 'ext');
+  const end = new Date(Date.now() + 60_000);
+  const electionId = await createElection(h.app, org.orgId, org.maker, {
+    title: 'CoC ext', kind: 'creditor_vote', startsAt: new Date(Date.now() - 1000), endsAt: end,
+  });
+  await importRoll(h.app, org.orgId, org.maker, electionId, [{ eligibilityRef: 'Bank A', votingUnits: 10 }]);
+  await setBallotDefinition(h.app, org.orgId, org.maker, electionId, { type: 'agenda', items: [{ id: 'A1', title: 'Plan', description: '', minChoices: 1, maxChoices: 1,
+    options: [{ id: 'O1', name: 'For' }, { id: 'O2', name: 'Against' }] }] });
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  await approveElection(h.app, org.orgId, org.maker, electionId);
+  await transition(h.app, org.orgId, org.maker, electionId, 'open');
+  await assert.rejects(extendVoting(h.app, org.orgId, org.maker, electionId, new Date(end.getTime() - 30_000)), /config_frozen/);
+  await extendVoting(h.app, org.orgId, org.maker, electionId, new Date(end.getTime() + 3600_000));
+  await transition(h.app, org.orgId, org.maker, electionId, 'closed');
+  await assert.rejects(extendVoting(h.app, org.orgId, org.maker, electionId, new Date(end.getTime() + 7200_000)), /config_frozen/);
+});
