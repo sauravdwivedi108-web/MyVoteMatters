@@ -18,7 +18,7 @@ import { friendlyError } from './errors';
 export type FormState = { error?: string; ok?: string } | undefined;
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
-const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || /^[a-z0-9][a-z0-9._-]{2,39}$/.test(e);
 
 /** datetime-local values are entered in India Standard Time. */
 const istDate = (v: string) => new Date(`${v}:00+05:30`);
@@ -33,8 +33,8 @@ export async function signup(_: FormState, fd: FormData): Promise<FormState> {
   const email = str(fd, 'email').toLowerCase();
   const password = String(fd.get('password') ?? '');
   if (!orgName || !name) return { error: 'Enter your organisation and your name.' };
-  if (!emailOk(email)) return { error: 'Enter a valid email address.' };
-  if (password.length < 10) return { error: 'Use a password of at least 10 characters.' };
+  if (!emailOk(email)) return { error: 'Enter a valid email address or a username (3 to 40 letters, numbers, dots or dashes).' };
+  if (password.length < 5) return { error: 'Use a password of at least 5 characters.' };
 
   const orgId = randomUUID();
   let userId: string;
@@ -72,7 +72,7 @@ export async function login(_: FormState, fd: FormData): Promise<FormState> {
     const { rows } = await tx.query(`SELECT * FROM vs.user_memberships($1)`, [u.id]);
     return rows[0] ? { userId: u.id as string, orgId: rows[0].organization_id as string } : null;
   });
-  if (!found) return { error: 'That email and password do not match an account.' };
+  if (!found) return { error: 'That username or email and password do not match an account.' };
   await startSession(found.userId, found.orgId);
   redirect('/app');
 }
@@ -90,7 +90,7 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
     const name = str(fd, 'name');
     const role = str(fd, 'role');
     const password = String(fd.get('password') ?? '');
-    if (!emailOk(email) || !name) return { error: 'Enter a name and a valid email address.' };
+    if (!emailOk(email) || !name) return { error: 'Enter a name and a valid email address or username.' };
     if (!['election_admin', 'approver', 'scrutinizer', 'viewer', 'owner'].includes(role)) return { error: 'Choose a role.' };
     if (password.length < 10) return { error: 'Set a temporary password of at least 10 characters.' };
     const hash = await hashPassword(password);

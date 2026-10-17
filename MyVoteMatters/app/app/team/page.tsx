@@ -65,7 +65,7 @@ export default async function Team() {
             <h2 className="h-icon"><UserPlus size={20} aria-hidden="true" />Add a member</h2>
             <ActionForm action={addMember}>
               <div className="field"><label htmlFor="name">Name</label><input id="name" name="name" type="text" required /></div>
-              <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" required /></div>
+              <div className="field"><label htmlFor="email">Email or username</label><input id="email" name="email" type="text" autoCapitalize="none" spellCheck={false} required /></div>
               <div className="field">
                 <label htmlFor="role">Role</label>
                 <select id="role" name="role" defaultValue="approver">

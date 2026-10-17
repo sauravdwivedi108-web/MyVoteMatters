@@ -22,10 +22,10 @@ export default async function Signup() {
         <ActionForm action={signup}>
           <div className="field"><label htmlFor="org">Company or firm name</label><input id="org" name="org" type="text" required placeholder="e.g. ABC Steel Ltd (under CIRP) or your firm" /></div>
           <div className="field"><label htmlFor="name">Your name</label><input id="name" name="name" type="text" autoComplete="name" required /></div>
-          <div className="field"><label htmlFor="email">Work email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
+          <div className="field"><label htmlFor="email">Email or username</label><input id="email" name="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required /></div>
           <div className="field">
-            <label htmlFor="password">Password <span className="hint">at least 10 characters</span></label>
-            <input id="password" name="password" type="password" autoComplete="new-password" minLength={10} required />
+            <label htmlFor="password">Password <span className="hint">at least 5 characters; longer is safer</span></label>
+            <input id="password" name="password" type="password" autoComplete="new-password" minLength={5} required />
           </div>
           <Submit className="btn block" pendingText="Creating…">Create admin account</Submit>
         </ActionForm>
