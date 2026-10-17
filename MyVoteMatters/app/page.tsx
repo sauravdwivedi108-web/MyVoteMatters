@@ -42,20 +42,28 @@ export default function Home() {
             <p className="small" style={{ color: '#aab3cc', marginTop: 14 }}>New organisation? <Link href="/signup" style={{ color: '#fff' }}>Create an admin account</Link></p>
           </div>
           <div className="hero-card" aria-label="Example result">
-            <div className="small" style={{ color: '#c9cfe3' }}>7th CoC meeting · Question 1 · needs 66% of total share</div>
+            <div className="small" style={{ color: '#c9cfe3' }}>Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
             <div className="res">
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, gap: 10 }}>
-                <span>Resolution plan by Applicant A</span><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span>
+              <div className="hero-opt">
+                <div><strong>Plan by Applicant A</strong><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
+                <div className="meter"><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
+                <div className="small muted num">78.75% of total share · 2 voters</div>
               </div>
-              <div className="meter" style={{ margin: '10px 0 6px' }}><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
-              <div className="small muted num">78.75% of total voting share · 2 of 4 creditors</div>
+              <div className="hero-opt">
+                <div><strong>Plan by Applicant B</strong><span className="small muted">Not approved</span></div>
+                <div className="meter"><span style={{ width: '15%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
+                <div className="small muted num">15.00% of total share · 1 voter</div>
+              </div>
             </div>
             <div className="res small hero-table">
-              <div><span>State Bank of India</span><span>56.25%</span><span>Applicant A</span></div>
-              <div><span>Axis Bank</span><span>22.50%</span><span>Applicant A</span></div>
-              <div><span>Edelweiss ARC</span><span>15.00%</span><span>Applicant B</span></div>
+              <div className="hero-head"><span>Creditor</span><span>Share</span><span>Voted for</span></div>
+              <div><span>State Bank of India</span><span>56.25%</span><span>Plan A</span></div>
+              <div><span>Axis Bank</span><span>22.50%</span><span>Plan A</span></div>
+              <div><span>Edelweiss ARC</span><span>15.00%</span><span>Plan B</span></div>
+              <div className="muted"><span>Operational creditors</span><span>6.25%</span><span>Did not vote</span></div>
             </div>
-            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 12, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
+            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 12, gap: 6 }}><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
+            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 6, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
           </div>
         </div>
       </div>

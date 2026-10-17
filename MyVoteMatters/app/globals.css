@@ -390,3 +390,9 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
 @media (prefers-reduced-motion: reduce) {
   svg.lucide, .feature .icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon, .feature, .role-card { transition: none !important; transform: none !important; }
 }
+.hero-opt + .hero-opt { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.hero-opt > div:first-child { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.hero-opt .meter { margin: 8px 0 4px; }
+.hero-table > .hero-head { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+.hero-table > .hero-head span:nth-child(2) { color: var(--muted); }
+.hero-card > .h-icon svg { color: inherit; }
