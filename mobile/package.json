@@ -1,0 +1,23 @@
+{
+  "name": "myvotematters-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android and iOS app for MyVoteMatters (Capacitor shell around the live web app)",
+  "scripts": {
+    "assets": "capacitor-assets generate --iconBackgroundColor '#635BFF' --iconBackgroundColorDark '#635BFF' --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#0b1020'",
+    "sync": "cap sync",
+    "apk:debug": "cap sync android && cd android && ./gradlew assembleDebug",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3"
+  }
+}
