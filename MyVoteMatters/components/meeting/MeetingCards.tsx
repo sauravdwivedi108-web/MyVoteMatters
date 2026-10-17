@@ -11,11 +11,11 @@ export function MeetingCards({ meetings, canCreate }: { meetings: ElectionSummar
         <h2>Run your first vote in five steps</h2>
         <p className="muted">Everything is set up from here. Voters only need the ID and password you give them.</p>
         <ol className="flow">
-          <li><ListChecks size={20} aria-hidden="true" /><strong>Questions</strong><span>Topics, options and descriptions</span></li>
-          <li><Users size={20} aria-hidden="true" /><strong>Voters</strong><span>Names and voting weight</span></li>
-          <li><KeyRound size={20} aria-hidden="true" /><strong>Voter IDs</strong><span>One login per voter</span></li>
-          <li><PlayCircle size={20} aria-hidden="true" /><strong>Voting</strong><span>Live turnout as they vote</span></li>
-          <li><BarChart3 size={20} aria-hidden="true" /><strong>Results</strong><span>% share, who voted what, audit log</span></li>
+          <li><span className="flow-icon"><ListChecks size={20} aria-hidden="true" /></span><strong>Questions</strong><span>Topics, options and descriptions</span></li>
+          <li><span className="flow-icon"><Users size={20} aria-hidden="true" /></span><strong>Voters</strong><span>Names and voting weight</span></li>
+          <li><span className="flow-icon"><KeyRound size={20} aria-hidden="true" /></span><strong>Voter IDs</strong><span>One login per voter</span></li>
+          <li><span className="flow-icon"><PlayCircle size={20} aria-hidden="true" /></span><strong>Voting</strong><span>Live turnout as they vote</span></li>
+          <li><span className="flow-icon"><BarChart3 size={20} aria-hidden="true" /></span><strong>Results</strong><span>% share, who voted what, audit log</span></li>
         </ol>
         {canCreate && <Link className="btn" href="/app/elections/new"><Plus size={18} aria-hidden="true" /> Create a voting meeting</Link>}
       </div>

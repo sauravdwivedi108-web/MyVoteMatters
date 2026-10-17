@@ -345,3 +345,48 @@ details.manage summary { cursor: pointer; color: var(--violet-strong); font-weig
   .login-sheet .slips { grid-template-columns: 1fr 1fr; }
   .card { box-shadow: none; }
 }
+
+/* ---------- Filled, hover-reactive icons ---------- */
+svg.lucide {
+  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), fill-opacity .2s ease, color .2s ease;
+  transform-origin: center;
+}
+/* Solid shapes get a soft fill; pure line icons (arrows, plus, refresh) stay outlined. */
+svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.lucide-x):not(.lucide-refresh-cw)
+  :not(.lucide-rotate-ccw):not(.lucide-external-link):not(.lucide-log-in):not(.lucide-log-out):not(.lucide-list-checks)
+  :not(.lucide-radio):not(.lucide-bar-chart-3):not(.lucide-chart-column):not(.lucide-download):not(.lucide-pencil-ruler) {
+  fill: currentColor;
+  fill-opacity: .22;
+}
+:is(a, button, label, .h-icon, .badge, .nav, .trust-list li, .check-list li, .flow li, .choice):hover > svg.lucide,
+:is(.card-head, .page-head):hover h2 > svg.lucide {
+  fill-opacity: .38;
+  transform: scale(1.18) rotate(-6deg);
+}
+:is(a, button):active > svg.lucide { transform: scale(.92); }
+.btn:hover > svg.lucide { transform: scale(1.18) translateY(-1px); }
+.btn:hover > svg.lucide-arrow-right { transform: translateX(4px); }
+
+/* Icon tiles: solid fill, lift and glow when their card is hovered. */
+.feature .icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon {
+  background: linear-gradient(140deg, var(--violet) 0%, var(--violet-strong) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(40, 72, 199, .7), inset 0 1px 0 rgba(255,255,255,.25);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
+}
+.stat-icon.teal, .role-icon.teal { background: linear-gradient(140deg, #18a999 0%, var(--teal-strong) 100%); color: #fff; box-shadow: 0 6px 16px -8px rgba(13, 128, 115, .7), inset 0 1px 0 rgba(255,255,255,.25); }
+.stat-icon.amber { background: linear-gradient(140deg, #f0a43a 0%, var(--amber) 100%); color: #fff; box-shadow: 0 6px 16px -8px rgba(180, 100, 10, .7), inset 0 1px 0 rgba(255,255,255,.25); }
+.flow-icon, .step-icon { background: linear-gradient(140deg, #24305a 0%, var(--navy) 100%); }
+:is(.feature .icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon) svg.lucide { fill: #fff; fill-opacity: .22; color: #fff; }
+:is(.feature, .stat, .role-card, .next-card, .flow li, .steps li, .card):hover > :is(.icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon),
+:is(.feature, .stat, .role-card, .flow li, .steps li):hover :is(.icon, .stat-icon, .role-icon, .step-icon, .flow-icon) {
+  transform: translateY(-3px) scale(1.08) rotate(-4deg);
+  box-shadow: 0 14px 26px -10px rgba(40, 72, 199, .75), 0 0 0 4px rgba(40, 72, 199, .12), inset 0 1px 0 rgba(255,255,255,.3);
+}
+:is(.feature, .stat, .role-card, .next-card, .flow li, .steps li):hover :is(.icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon) svg.lucide { fill-opacity: .45; transform: scale(1.1); }
+:is(.feature, .stat, .role-card, .flow li, .steps li) { transition: transform .25s ease, box-shadow .25s ease; }
+:is(.feature, .role-card):hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  svg.lucide, .feature .icon, .stat-icon, .role-icon, .next-icon, .step-icon, .flow-icon, .feature, .role-card { transition: none !important; transform: none !important; }
+}
