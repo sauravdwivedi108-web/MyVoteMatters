@@ -128,6 +128,7 @@ export function BallotBuilder({ kind, initial, action }: {
                   </div>
                 ))}
                 <button type="button" className="btn secondary small" onClick={() => updItem(i, { options: [...it.options, { name: '', detail: '' }] })}>+ Add option</button>
+                <button type="button" className="btn ghost small" style={{ marginLeft: 8 }} onClick={() => updItem(i, { options: [{ name: 'For', detail: '' }, { name: 'Against', detail: '' }, { name: 'Abstain', detail: '' }], minChoices: 1, maxChoices: 1 })}>Use For / Against / Abstain</button>
               </fieldset>
               <div className="opt-rule">
                 <div className="field" style={{ marginBottom: 0 }}>

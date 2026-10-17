@@ -398,3 +398,5 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
 .hero-card > .h-icon svg { color: inherit; }
 .main, .shell > * { min-width: 0; }
 .tracker li { min-width: 0; }
+.row-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.voter-receipt table { width: 100%; }

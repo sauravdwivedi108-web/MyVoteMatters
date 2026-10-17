@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { picksLabel, splitPicks, type BallotDefinition, type Choices } from '@/lib/core/ballot';
 import { Brand } from '@/components/Brand';
-import { LogOut, Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock } from 'lucide-react';
+import { LogOut, Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock, Printer } from 'lucide-react';
 
 type Ballot = {
   title: string; org_name: string; status: string; starts_at: string; ends_at: string;
@@ -104,6 +104,35 @@ export function VoterApp() {
   if (error && !ballot) return shell(<><div className="notice error" role="alert">{error}</div><Link className="btn secondary" href="/voter">Go to voter login</Link></>);
   if (!ballot || stage === 'loading') return shell(<p className="muted" aria-live="polite">Loading your ballot…</p>);
 
+  const summaryTable = (def: BallotDefinition) => (
+    def.type === 'resolutions' ? (
+            <table>
+              <tbody>
+                {def.resolutions.map((r, i) => (
+                  <tr key={r.id}><td><span className="small muted">Resolution {i + 1}</span><br />{r.title}</td>
+                    <td className="r"><strong>{OPTIONS.find((o) => o[0] === choices[r.id])?.[1]}</strong></td></tr>
+                ))}
+              </tbody>
+            </table>
+          ) : def.type === 'agenda' ? (
+            <table>
+              <tbody>
+                {def.items.map((it, i) => {
+                  const picks = splitPicks(choices[it.id] ?? '');
+                  return (
+                    <tr key={it.id}><td><span className="small muted">Item {i + 1}</span><br />{it.title}</td>
+                      <td className="r">{picks.length
+                        ? picks.map((p) => <div key={p}><strong>{it.options.find((o) => o.id === p)?.name}</strong></div>)
+                        : <span className="muted">No choice</span>}</td></tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p>{def.question}<br /><strong>{def.candidates.find((c) => c.id === choices.candidate)?.name}</strong></p>
+          )
+  );
+
   if (stage === 'done' && receipt) {
     const verify = `/verify?o=${encodeURIComponent(token!.split('.')[0])}&e=${encodeURIComponent(token!.split('.')[1])}&r=${receipt}`;
     return shell(
@@ -118,7 +147,18 @@ export function VoterApp() {
             ? 'Keep this code. It proves your vote was accepted. Your choices are recorded under your name for the administrator.'
             : 'Keep this code. It proves your ballot was accepted. It does not show how you voted, and nobody can use it to find out.'}
         </p>
-        <Link className="btn secondary" href={verify}><Receipt size={16} aria-hidden="true" /> Check my receipt</Link>
+        {ballot.kind === 'creditor_vote' && ballot.definition && (
+          <div className="card voter-receipt" style={{ textAlign: 'left', marginTop: 16 }}>
+            <div className="small muted">Vote receipt · {ballot.org_name}</div>
+            <strong>{ballot.voter_name}</strong>
+            <div className="small muted" style={{ marginBottom: 8 }}>Recorded {fmt(new Date().toISOString())}</div>
+            {summaryTable(ballot.definition)}
+          </div>
+        )}
+        <div className="row-btns no-print" style={{ justifyContent: 'center' }}>
+          {ballot.kind === 'creditor_vote' && <button type="button" className="btn" onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> Print or save receipt</button>}
+          <Link className="btn secondary" href={verify}><Receipt size={16} aria-hidden="true" /> Check my receipt</Link>
+        </div>
       </div>,
     );
   }
@@ -156,32 +196,7 @@ export function VoterApp() {
         <p className="muted">Once you confirm, your vote is final and cannot be changed.</p>
         {error && <div className="notice error h-icon" role="alert"><AlertTriangle size={18} aria-hidden="true" />{error}</div>}
         <div className="card">
-          {def.type === 'resolutions' ? (
-            <table>
-              <tbody>
-                {def.resolutions.map((r, i) => (
-                  <tr key={r.id}><td><span className="small muted">Resolution {i + 1}</span><br />{r.title}</td>
-                    <td className="r"><strong>{OPTIONS.find((o) => o[0] === choices[r.id])?.[1]}</strong></td></tr>
-                ))}
-              </tbody>
-            </table>
-          ) : def.type === 'agenda' ? (
-            <table>
-              <tbody>
-                {def.items.map((it, i) => {
-                  const picks = splitPicks(choices[it.id] ?? '');
-                  return (
-                    <tr key={it.id}><td><span className="small muted">Item {i + 1}</span><br />{it.title}</td>
-                      <td className="r">{picks.length
-                        ? picks.map((p) => <div key={p}><strong>{it.options.find((o) => o.id === p)?.name}</strong></div>)
-                        : <span className="muted">No choice</span>}</td></tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <p>{def.question}<br /><strong>{def.candidates.find((c) => c.id === choices.candidate)?.name}</strong></p>
-          )}
+          {summaryTable(def)}
           {ballot.kind !== 'internal_poll' && <p className="small muted" style={{ marginTop: 12 }}>{ballot.units_total
             ? <>Cast with {sharePct(ballot.voting_units, ballot.units_total)} of the total voting share.</>
             : <>Cast with {BigInt(ballot.voting_units).toLocaleString('en-IN')} voting units.</>}</p>}
