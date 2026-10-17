@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import { withTenant } from './db';
+import { withTenant, audit } from './db';
 import { BallotDefinition, Choices, normalizeChoices, validateChoices } from './ballot';
 import { canonicalJson, credentialDerivations, credentialHash, encryptBallot, receiptCommitment, sha256Hex } from './crypto';
 
@@ -16,6 +16,8 @@ export type CastOutcome =
  */
 export async function castVote(pool: pg.Pool, orgId: string, input: {
   electionId: string; credentialSecret: string; choices: Choices;
+  /** Where the vote came from. Recorded only for open (named) ballots, never for secret ones. */
+  client?: { ip: string; device: string };
 }): Promise<CastOutcome> {
   return withTenant(pool, orgId, async (tx) => {
     const ctx = await tx.query('SELECT * FROM vs.credential_context($1)', [credentialHash(input.credentialSecret)]);
@@ -50,6 +52,11 @@ export async function castVote(pool: pg.Pool, orgId: string, input: {
       [input.electionId, d.credentialHash, d.retryTag, d.receiptCommitment, ballot.version, payload,
        ...(open ? [canonicalJson(input.choices)] : [])]);
     if (r.outcome !== 'accepted') return { status: 'rejected', reason: r.outcome };
+    if (open && !r.replayed) {
+      const { rows: [who] } = await tx.query('SELECT eligibility_ref FROM vs.open_voter_context($1)', [credentialHash(input.credentialSecret)]);
+      await audit(tx, orgId, `voter:${who?.eligibility_ref ?? 'unknown'}`, 'vote.cast', `election:${input.electionId}`,
+        { voter: who?.eligibility_ref ?? null, ip: input.client?.ip ?? null, device: input.client?.device ?? null });
+    }
     return { status: 'accepted', receiptCode: d.receiptCode, replayed: r.replayed };
   });
 }

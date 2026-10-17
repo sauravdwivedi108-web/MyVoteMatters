@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/pool';
 import { castVote } from '@/lib/core/voting';
-import { parseVoterToken, throttle, clientKey } from '@/lib/voter';
+import { parseVoterToken, throttle, clientKey, deviceLabel } from '@/lib/voter';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: REASONS.invalid_credential }, { status: 400 });
   }
   try {
-    const r = await castVote(await db(), t.orgId, { electionId: t.electionId, credentialSecret: t.secret, choices: body.choices });
+    const r = await castVote(await db(), t.orgId, { electionId: t.electionId, credentialSecret: t.secret, choices: body.choices,
+      client: { ip: clientKey(req), device: deviceLabel(req.headers.get('user-agent')) } });
     if (r.status === 'accepted') {
       return NextResponse.json({ receipt: r.receiptCode, replayed: r.replayed }, { headers: { 'Cache-Control': 'no-store' } });
     }

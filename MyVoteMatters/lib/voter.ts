@@ -25,3 +25,13 @@ export function throttle(key: string, limit = 30, windowMs = 60_000) {
 
 export const clientKey = (req: Request) =>
   (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+
+/** A short, human label for the voter's device, e.g. "Android phone · Chrome". */
+export function deviceLabel(ua: string | null) {
+  if (!ua) return 'unknown device';
+  const os = /iPhone|iPad/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
+    : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'other';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /CriOS|Chrome\//.test(ua) ? 'Chrome'
+    : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'other browser';
+  return `${os} · ${browser}`;
+}

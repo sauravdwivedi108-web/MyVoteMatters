@@ -31,7 +31,7 @@ export type ElectionDetail = ElectionSummary & {
   credentials: number;
   roll: { eligibility_ref: string; voting_units: string }[];
   tally: (TallyResult & { result_hash: string; completed_at: Date }) | null;
-  audit: { action: string; actor: string; event_time: Date; hash: string }[];
+  audit: { action: string; actor: string; event_time: Date; hash: string; detail: Record<string, unknown> }[];
 };
 
 export async function getElection(s: Session, id: string): Promise<ElectionDetail | null> {
@@ -56,9 +56,9 @@ export async function getElection(s: Session, id: string): Promise<ElectionDetai
       `SELECT result, result_hash, completed_at FROM tally_runs WHERE election_id = $1
         ORDER BY completed_at DESC LIMIT 1`, [id]);
     const { rows: audit } = await tx.query(
-      `SELECT a.action, coalesce(u.display_name, a.actor_ref) AS actor, a.event_time, a.hash
+      `SELECT a.action, coalesce(u.display_name, regexp_replace(a.actor_ref, '^voter:', '')) AS actor, a.event_time, a.hash, a.detail
          FROM audit_events a LEFT JOIN users u ON 'user:' || u.id = a.actor_ref
-        WHERE a.resource_ref = $1 ORDER BY a.seq DESC LIMIT 30`, [`election:${id}`]);
+        WHERE a.resource_ref = $1 ORDER BY a.seq DESC LIMIT 200`, [`election:${id}`]);
     return {
       ...e,
       ballot: b ?? null,

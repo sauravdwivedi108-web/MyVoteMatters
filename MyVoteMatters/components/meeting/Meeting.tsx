@@ -30,6 +30,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
   const manage = can(s, 'manage');
   const voters = await getMeetingVoters(s, e.id);
   const broken = tab === 'audit' || tab === 'results' ? await auditChainBreak(s) : null;
+  const closedAt = e.audit.find((a) => a.action === 'election.closed')?.event_time ?? null;
   const h = await headers();
   const loginUrl = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}/voter`;
 
@@ -264,7 +265,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
                 <div className="small">MyVoteMatters · Results report</div>
                 <h1>{e.title}</h1>
                 <div>{s.orgName}</div>
-                <div className="small">Report generated {ist(new Date())} · {voted.length} of {voters.length} voters voted ({share(votedUnits, total)} of the total voting share)</div>
+                <div className="small">{closedAt ? <>Voting ended {ist(closedAt)} · </> : null}Report generated {ist(new Date())} · {voted.length} of {voters.length} voters voted ({share(votedUnits, total)} of the total voting share)</div>
                 <div className="small">Audit log: {broken === null ? 'hash chain verified, no entry changed or removed' : `chain break at entry ${broken}`}</div>
               </div>
               <div className="card">
@@ -308,7 +309,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
               <thead><tr><th>When (IST)</th><th>Action</th><th>By</th><th>Fingerprint</th></tr></thead>
               <tbody>
                 {e.audit.map((a) => (
-                  <tr key={a.hash}><td className="small">{ist(a.event_time)}</td><td>{auditLabel(a.action)}</td><td>{a.actor}</td><td className="mono small">{a.hash.slice(0, 16)}…</td></tr>
+                  <tr key={a.hash}><td className="small">{ist(a.event_time)}</td><td>{auditLabel(a.action)}{auditNote(a)}</td><td>{a.actor}</td><td className="mono small">{a.hash.slice(0, 16)}…</td></tr>
                 ))}
               </tbody>
             </table>
@@ -324,8 +325,15 @@ const AUDIT: Record<string, string> = {
   'roll.entry_removed': 'Voter removed', 'roll.cleared': 'Voter list cleared', 'election.submitted': 'Meeting locked',
   'election.approved': 'Questions and voters frozen', 'voter_ids.issued': 'Voter IDs created', 'voter.password_reset': 'Voter password reset',
   'election.open': 'Voting started', 'election.closed': 'Voting ended', 'election.deleted': 'Meeting deleted',
+  'vote.cast': 'Vote cast', 'election.extended': 'Closing time extended',
 };
 const auditLabel = (a: string) => AUDIT[a] ?? a;
+const auditNote = (a: { action: string; detail: Record<string, unknown> }) => {
+  const d = a.detail ?? {};
+  if (a.action === 'vote.cast' && (d.ip || d.device)) return <div className="small muted">IP {String(d.ip ?? '?')} · {String(d.device ?? '')}</div>;
+  if (a.action === 'election.extended' && d.to) return <div className="small muted">New closing time {ist(String(d.to))}</div>;
+  return null;
+};
 
 function Next({ icon: Icon, title, text, children }: { icon: typeof ListChecks; title: string; text: string; children: React.ReactNode }) {
   return (
