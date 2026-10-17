@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState, useTransition } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormState } from '@/lib/actions';
 
@@ -22,6 +22,12 @@ export function ActionForm({ action, children, className }: {
   action: (s: FormState, fd: FormData) => Promise<FormState>; children: React.ReactNode; className?: string;
 }) {
   const [state, formAction] = useActionState(action, undefined);
+  useEffect(() => {
+    // A voter who signed in on the admin page: hand the token to the ballot page.
+    if (!state?.voterToken) return;
+    try { sessionStorage.setItem('mvm_voter', state.voterToken); } catch { /* private mode: the fragment below still works */ }
+    window.location.assign(`/vote#${state.voterToken}`);
+  }, [state]);
   return (
     <form action={formAction} className={className}>
       <Notice state={state} />

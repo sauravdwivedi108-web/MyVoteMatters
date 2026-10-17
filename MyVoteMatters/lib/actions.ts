@@ -14,8 +14,9 @@ import { tallyElection } from './core/tally';
 import type { BallotDefinition } from './core/ballot';
 import { endSession, hashPassword, requirePermission, requireSession, startSession, verifyPassword } from './auth';
 import { friendlyError } from './errors';
+import { resolveVoterLogin } from './core/voterLogins';
 
-export type FormState = { error?: string; ok?: string } | undefined;
+export type FormState = { error?: string; ok?: string; voterToken?: string } | undefined;
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || /^[a-z0-9][a-z0-9._-]{2,39}$/.test(e);
@@ -72,7 +73,12 @@ export async function login(_: FormState, fd: FormData): Promise<FormState> {
     const { rows } = await tx.query(`SELECT * FROM vs.user_memberships($1)`, [u.id]);
     return rows[0] ? { userId: u.id as string, orgId: rows[0].organization_id as string } : null;
   });
-  if (!found) return { error: 'That username or email and password do not match an account.' };
+  if (!found) {
+    // Voters often use this page by mistake: if these are a voter's ID and password, take them to their ballot.
+    const voter = await resolveVoterLogin(pool, str(fd, 'email'), password).catch(() => null);
+    if (voter) return { ok: 'Opening your ballot…', voterToken: `${voter.orgId}.${voter.electionId}.${voter.secret}` };
+    return { error: 'That username or email and password do not match an account. Voters: use the voter ID and password from your slip.' };
+  }
   await startSession(found.userId, found.orgId);
   redirect('/app');
 }

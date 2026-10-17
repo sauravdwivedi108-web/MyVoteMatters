@@ -23,7 +23,7 @@ export default async function Login() {
         <h1 style={{ fontSize: '1.5rem' }}>Admin login</h1>
         <p className="muted">For administrators who set up meetings and voters. Voters log in at the <Link href="/voter">voter login</Link>.</p>
         <ActionForm action={login}>
-          <div className="field"><label htmlFor="email">Email or username</label><input id="email" name="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required /></div>
+          <div className="field"><label htmlFor="email">Email, username or voter ID</label><input id="email" name="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required /></div>
           <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
           <Submit className="btn block" pendingText="Signing in…"><LogIn size={18} aria-hidden="true" /> Log in</Submit>
         </ActionForm>
