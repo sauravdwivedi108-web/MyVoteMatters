@@ -1,6 +1,9 @@
 import { splitPicks, type AgendaBallot } from './ballot';
 
-export type OptionResult = { id: string; name: string; units: string; voters: number; pctOfTotal: number; pctOfCast: number };
+export type OptionResult = { id: string; name: string; units: string; voters: number; pctOfTotal: number; pctOfCast: number; abstain: boolean };
+
+/** An option called "Abstain" records the vote but can never be approved or selected. */
+export const isAbstain = (name: string) => /^\s*abstain(ed)?\s*$/i.test(name);
 export type ItemResult = {
   id: string; title: string; thresholdPct?: number; seats: number;
   options: OptionResult[];
@@ -37,11 +40,11 @@ export function countAgenda(def: AgendaBallot, ballots: { units: string; choices
     }
     const options = it.options.map((o) => ({
       id: o.id, name: o.name, units: units.get(o.id)!.toString(), voters: voters.get(o.id)!,
-      pctOfTotal: pct(units.get(o.id)!, total), pctOfCast: pct(units.get(o.id)!, unitsOn),
+      pctOfTotal: pct(units.get(o.id)!, total), pctOfCast: pct(units.get(o.id)!, unitsOn), abstain: isAbstain(o.name),
     }));
     const bp = it.thresholdPct === undefined ? null : BigInt(Math.round(it.thresholdPct * 100));
     const contenders = [...options]
-      .filter((o) => BigInt(o.units) > 0n && (bp === null || BigInt(o.units) * 10000n >= bp * total))
+      .filter((o) => !o.abstain && BigInt(o.units) > 0n && (bp === null || BigInt(o.units) * 10000n >= bp * total))
       .sort((a, b) => (BigInt(b.units) > BigInt(a.units) ? 1 : BigInt(b.units) < BigInt(a.units) ? -1 : 0));
     const seats = it.maxChoices;
     const tiedAtCutoff = contenders.length > seats && contenders[seats - 1].units === contenders[seats].units;

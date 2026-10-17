@@ -29,7 +29,7 @@ const share = (part: string | bigint, total: bigint) =>
 export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; tab: string }) {
   const manage = can(s, 'manage');
   const voters = await getMeetingVoters(s, e.id);
-  const broken = tab === 'audit' ? await auditChainBreak(s) : null;
+  const broken = tab === 'audit' || tab === 'results' ? await auditChainBreak(s) : null;
   const h = await headers();
   const loginUrl = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}/voter`;
 
@@ -260,6 +260,13 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
             </div>
           ) : def && (
             <>
+              <div className="print-only report-head">
+                <div className="small">MyVoteMatters · Results report</div>
+                <h1>{e.title}</h1>
+                <div>{s.orgName}</div>
+                <div className="small">Report generated {ist(new Date())} · {voted.length} of {voters.length} voters voted ({share(votedUnits, total)} of the total voting share)</div>
+                <div className="small">Audit log: {broken === null ? 'hash chain verified, no entry changed or removed' : `chain break at entry ${broken}`}</div>
+              </div>
               <div className="card">
                 <div className="card-head">
                   <h2 className="h-icon"><BarChart3 size={20} aria-hidden="true" />Results</h2>
@@ -274,6 +281,11 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
               <div className="card">
                 <div className="card-head"><h2 className="h-icon"><Users size={20} aria-hidden="true" />Who voted for what</h2></div>
                 <OpenVoteReport title={e.title} definition={def} rows={voters} />
+              </div>
+              <div className="print-only report-sign">
+                <div><span />Resolution professional / Administrator</div>
+                <div><span />Scrutinizer</div>
+                <div><span />Date and place</div>
               </div>
             </>
           )}
@@ -359,6 +371,7 @@ function MeetingResults({ def, voters, total }: { def: AgendaBallot; voters: { v
                 {[...r.options].sort((a, b) => b.pctOfTotal - a.pctOfTotal).map((o) => (
                   <tr key={o.id}>
                     <td>{o.name} {r.selected.includes(o.id) && <span className="badge open" style={{ marginLeft: 6 }}>{r.thresholdPct !== undefined ? 'Approved' : 'Selected'}</span>}
+                      {o.abstain && <span className="badge draft" style={{ marginLeft: 6 }}>Not counted for approval</span>}
                       <div className="meter" aria-hidden="true" style={{ marginTop: 6 }}>
                         <span style={{ width: `${o.pctOfTotal}%` }} />
                         {r.thresholdPct !== undefined && <i className="meter-mark" style={{ left: `${r.thresholdPct}%` }} />}

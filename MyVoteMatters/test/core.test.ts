@@ -476,3 +476,13 @@ test('meeting: closing time can only be extended, and not after voting ends', as
   await transition(h.app, org.orgId, org.maker, electionId, 'closed');
   await assert.rejects(extendVoting(h.app, org.orgId, org.maker, electionId, new Date(end.getTime() + 7200_000)), /config_frozen/);
 });
+
+test('agenda results: an Abstain option is shown but never approved', async () => {
+  const { countAgenda } = await import('../lib/core/agendaResults');
+  const def = { type: 'agenda' as const, items: [{ id: 'Q', title: 'Plan', description: '', minChoices: 1, maxChoices: 1, thresholdPct: 66,
+    options: [{ id: 'F', name: 'For' }, { id: 'A', name: 'Against' }, { id: 'X', name: 'Abstain' }] }] };
+  const [r] = countAgenda(def, [{ units: '70', choices: { Q: 'X' } }, { units: '30', choices: { Q: 'F' } }], '100');
+  assert.deepEqual(r.selected, []);
+  assert.equal(r.options.find((o) => o.id === 'X')!.pctOfTotal, 70);
+  assert.ok(r.options.find((o) => o.id === 'X')!.abstain);
+});
