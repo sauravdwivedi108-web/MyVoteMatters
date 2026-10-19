@@ -46,6 +46,14 @@ export function VoterApp() {
       .catch((e) => setError(e.message));
   }, []);
 
+  // Waiting for the administrator to start voting: check again every 15 seconds so the ballot appears on its own.
+  const waiting = !!ballot && !ballot.already_voted && ballot.status !== 'open' && !['closed', 'tallied', 'published'].includes(ballot.status);
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setInterval(() => window.location.reload(), 15_000);
+    return () => clearInterval(id);
+  }, [waiting]);
+
   const d0 = ballot?.definition;
   const okItem = (id: string, min: number, max: number) => {
     const n = splitPicks(choices[id] ?? '').length;
@@ -180,8 +188,11 @@ export function VoterApp() {
       <div className="card">
         <div className="big-check" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }} aria-hidden="true"><Clock size={32} /></div>
         <h1>{ballot.title}</h1>
-        <p>{ended ? 'Voting has closed.' : `Voting has not opened yet. It is scheduled from ${fmt(ballot.starts_at)} to ${fmt(ballot.ends_at)}.`}</p>
-        {!ended && <p className="small muted">Keep this link and come back once voting opens.</p>}
+        <p>{ended ? 'Voting has closed.'
+          : ballot.kind === 'creditor_vote'
+            ? `Your login is correct. Voting has not started yet: the administrator will start it, and it closes ${fmt(ballot.ends_at)}.`
+            : `Voting has not opened yet. It is scheduled from ${fmt(ballot.starts_at)} to ${fmt(ballot.ends_at)}.`}</p>
+        {!ended && <p className="small muted">Keep this page open. Your ballot appears here by itself as soon as voting starts.</p>}
       </div>,
     );
   }
