@@ -66,7 +66,9 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
           <h1 style={{ marginTop: 4 }}>{e.title}</h1>
           <div className="meta-row">
             <span className={`badge ${badge}`}>{label}</span>
-            <span className="small muted h-icon" style={{ gap: 6 }}><Clock size={14} aria-hidden="true" /> {closedAt ? <>Voting ended {ist(closedAt)}</> : <>Voting closes {ist(e.ends_at)}</>}</span>
+            <span className="small muted h-icon" style={{ gap: 6 }}><Clock size={14} aria-hidden="true" /> {closedAt ? <>Voting ended {ist(closedAt)}</> : e.auto_start && !['open'].includes(e.status)
+              ? <>Voting {ist(e.starts_at)} to {ist(e.ends_at)}</> : <>Voting closes {ist(e.ends_at)}</>}</span>
+            {e.record_date && <span className="small muted">Record date {new Date(e.record_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
           </div>
         </div>
         {draft && manage && (
@@ -99,10 +101,12 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
           {draft && def && voters.length > 0 && <Next icon={KeyRound} title="Lock the meeting and create voter IDs"
             text={`${def.items.length} question${def.items.length === 1 ? '' : 's'} and ${voters.length} voter${voters.length === 1 ? '' : 's'} are ready. Locking freezes them and gives every voter a login ID and password.`}>
             <LockPanel action={lockAndIssueIds.bind(null, e.id)} meeting={e.title} org={s.orgName} loginUrl={loginUrl} /></Next>}
-          {e.status === 'approved' && <Next icon={PlayCircle} title="Share the voter IDs, then start voting"
-            text={`Voters log in at ${loginUrl}. Nobody can vote until you start.`}>
+          {e.status === 'approved' && <Next icon={PlayCircle} title={e.auto_start ? `Share the voter IDs. Voting opens by itself on ${ist(e.starts_at)}` : 'Share the voter IDs, then start voting'}
+            text={e.auto_start
+              ? `Voters log in at ${loginUrl}. They can vote from ${ist(e.starts_at)} until ${ist(e.ends_at)}. You can also start it earlier.`
+              : `Voters log in at ${loginUrl}. Nobody can vote until you start.`}>
             <ActionButton action={startVoting.bind(null, e.id)} className="btn teal" confirm="Start voting now? Voters can log in and vote straight away.">
-              <PlayCircle size={18} aria-hidden="true" /> Start voting</ActionButton></Next>}
+              <PlayCircle size={18} aria-hidden="true" /> {e.auto_start ? 'Start voting now' : 'Start voting'}</ActionButton></Next>}
           {e.status === 'open' && <Next icon={Radio} title="Voting is live"
             text={`${voted.length} of ${voters.length} voters have voted, holding ${share(votedUnits, total)} of the total voting share. Results unlock when you end voting.`}>
             <ActionButton action={endVoting.bind(null, e.id)} className="btn danger" confirm="End voting now? Nobody will be able to vote after this, and results will be shown.">

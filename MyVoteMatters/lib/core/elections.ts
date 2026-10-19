@@ -13,14 +13,16 @@ export type ElectionInput = {
   startsAt: Date;
   endsAt: Date;
   recordDate?: string;
+  /** Creditor votes: open by themselves at `startsAt` once locked. */
+  autoStart?: boolean;
 };
 
 export async function createElection(pool: pg.Pool, orgId: string, actorId: string, input: ElectionInput) {
   return withTenant(pool, orgId, async (tx) => {
     const { rows } = await tx.query(
-      `INSERT INTO elections (organization_id, title, kind, starts_at, ends_at, record_date, created_by)
-       VALUES (vs.current_org(), $1, $2, $3, $4, $5, $6) RETURNING id`,
-      [input.title, input.kind, input.startsAt, input.endsAt, input.recordDate ?? null, actorId],
+      `INSERT INTO elections (organization_id, title, kind, starts_at, ends_at, record_date, created_by, auto_start)
+       VALUES (vs.current_org(), $1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [input.title, input.kind, input.startsAt, input.endsAt, input.recordDate ?? null, actorId, !!input.autoStart],
     );
     await audit(tx, orgId, `user:${actorId}`, 'election.created', `election:${rows[0].id}`);
     return rows[0].id as string;
@@ -133,10 +135,22 @@ export async function issueCredentials(pool: pg.Pool, orgId: string, actorId: st
 export async function transition(pool: pg.Pool, orgId: string, actorId: string, electionId: string,
                                  to: 'open' | 'closed' | 'published') {
   return withTenant(pool, orgId, async (tx) => {
-    const res = await tx.query(`UPDATE elections SET status = $2 WHERE id = $1`, [electionId, to]);
+    // A creditor vote started before its scheduled time records the moment it actually opened.
+    const res = await tx.query(
+      `UPDATE elections SET status = $2,
+              starts_at = CASE WHEN $2 = 'open' AND kind = 'creditor_vote' AND starts_at > now() THEN now() ELSE starts_at END
+        WHERE id = $1`, [electionId, to]);
     if (!res.rowCount) throw new DomainError('not_found');
     await audit(tx, orgId, `user:${actorId}`, `election.${to}`, `election:${electionId}`);
   });
+}
+
+/**
+ * Opens a locked creditor vote whose start time has come, or closes one whose
+ * closing time has passed. Cheap; called whenever a meeting is looked at.
+ */
+export async function applySchedule(pool: pg.Pool, orgId: string, electionId: string): Promise<'open' | 'closed' | null> {
+  return withTenant(pool, orgId, async (tx) => (await tx.query('SELECT vs.apply_schedule($1) AS s', [electionId])).rows[0].s);
 }
 
 /** Moves the closing time of a creditor vote later, before it has closed. The database rejects anything else. */

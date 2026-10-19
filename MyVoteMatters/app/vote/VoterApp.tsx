@@ -7,7 +7,7 @@ import { Brand } from '@/components/Brand';
 import { LogOut, Eye, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown, MinusCircle, Lock, ArrowLeft, Send, Receipt, AlertTriangle, Clock, Printer } from 'lucide-react';
 
 type Ballot = {
-  title: string; org_name: string; status: string; starts_at: string; ends_at: string;
+  title: string; org_name: string; status: string; auto_start?: boolean; starts_at: string; ends_at: string;
   version: number | null; definition: BallotDefinition | null; already_voted: boolean; voting_units: string; kind: string;
   voter_name?: string; units_total?: string;
 };
@@ -189,6 +189,8 @@ export function VoterApp() {
         <div className="big-check" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }} aria-hidden="true"><Clock size={32} /></div>
         <h1>{ballot.title}</h1>
         <p>{ended ? 'Voting has closed.'
+          : ballot.kind === 'creditor_vote' && ballot.auto_start
+            ? `Your login is correct. Voting opens on ${fmt(ballot.starts_at)} and closes on ${fmt(ballot.ends_at)}.`
           : ballot.kind === 'creditor_vote'
             ? `Your login is correct. Voting has not started yet: the administrator will start it, and it closes ${fmt(ballot.ends_at)}.`
             : `Voting has not opened yet. It is scheduled from ${fmt(ballot.starts_at)} to ${fmt(ballot.ends_at)}.`}</p>

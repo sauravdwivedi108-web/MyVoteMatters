@@ -16,8 +16,9 @@ export async function POST(req: Request) {
   const data = await withTenant(await db(), t.orgId, async (tx) => {
     const { rows: [ctx] } = await tx.query('SELECT * FROM vs.credential_context($1)', [credentialHash(t.secret)]);
     if (!ctx || ctx.election_id !== t.electionId) return null;
+    await tx.query('SELECT vs.apply_schedule($1)', [t.electionId]);
     const { rows: [e] } = await tx.query(
-      `SELECT e.title, e.kind, e.status, e.starts_at, e.ends_at, o.name AS org_name, d.version, d.definition
+      `SELECT e.title, e.kind, e.status, e.auto_start, e.starts_at, e.ends_at, o.name AS org_name, d.version, d.definition
          FROM elections e JOIN organizations o ON o.id = e.organization_id
          LEFT JOIN ballot_definitions d ON d.election_id = e.id AND d.published_at IS NOT NULL
         WHERE e.id = $1`, [t.electionId]);

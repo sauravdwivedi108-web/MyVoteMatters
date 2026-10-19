@@ -14,6 +14,8 @@ export type ElectionSummary = {
 
 export async function listElections(s: Session): Promise<ElectionSummary[]> {
   return withTenant(await db(), s.orgId, async (tx) => {
+    // Meetings open and close by their own schedule; catch up before listing.
+    await tx.query(`SELECT vs.apply_schedule(id) FROM elections WHERE kind = 'creditor_vote' AND status IN ('approved', 'open')`);
     const { rows } = await tx.query(
       `SELECT e.id, e.title, e.kind, e.status, e.starts_at, e.ends_at, t.eligible::int, t.voted::int
          FROM elections e CROSS JOIN LATERAL vs.turnout(e.id) t
@@ -24,6 +26,7 @@ export async function listElections(s: Session): Promise<ElectionSummary[]> {
 
 export type ElectionDetail = ElectionSummary & {
   record_date: string | null;
+  auto_start: boolean;
   created_by: string; submitted_by: string | null; approved_by: string | null;
   submitted_by_name: string | null; approved_by_name: string | null;
   units_eligible: string; units_voted: string;
@@ -37,6 +40,7 @@ export type ElectionDetail = ElectionSummary & {
 export async function getElection(s: Session, id: string): Promise<ElectionDetail | null> {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   return withTenant(await db(), s.orgId, async (tx) => {
+    await tx.query('SELECT vs.apply_schedule($1)', [id]);
     const { rows: [e] } = await tx.query(
       `SELECT e.*, su.display_name AS submitted_by_name, ap.display_name AS approved_by_name,
               t.eligible::int, t.voted::int, t.units_eligible::text, t.units_voted::text

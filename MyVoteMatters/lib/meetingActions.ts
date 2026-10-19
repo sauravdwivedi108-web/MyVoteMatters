@@ -19,12 +19,16 @@ export async function createMeeting(_: FormState, fd: FormData): Promise<FormSta
   try {
     requirePermission(s, 'manage');
     const title = str(fd, 'title');
+    const startsAt = istDate(str(fd, 'starts_at'));
     const endsAt = istDate(str(fd, 'ends_at'));
     if (!title) return { error: 'Give the meeting a name.' };
+    if (isNaN(+startsAt)) return { error: 'Choose when voting starts.' };
     if (isNaN(+endsAt)) return { error: 'Choose when voting closes.' };
-    if (+endsAt <= Date.now() + 5 * 60_000) return { error: 'Voting must close at least a few minutes from now.' };
+    if (+startsAt < Date.now() - 10 * 60_000) return { error: 'Voting cannot start in the past. Choose a start time from now on.' };
+    if (+endsAt <= +startsAt + 5 * 60_000) return { error: 'Voting must close after it starts.' };
+    // Voting opens by itself at the start time, once the meeting is locked. The record date is the start date.
     id = await createElection(await db(), s.orgId, s.userId, {
-      title, kind: 'creditor_vote', startsAt: new Date(Date.now() - 60_000), endsAt, recordDate: str(fd, 'record_date') || undefined,
+      title, kind: 'creditor_vote', startsAt, endsAt, recordDate: str(fd, 'starts_at').slice(0, 10), autoStart: true,
     });
   } catch (err) {
     return { error: friendlyError(err) };

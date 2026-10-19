@@ -456,6 +456,43 @@ test('meeting: the administrator can choose a voter\'s own ID and password; IDs 
   assert.ok(await resolveVoterLogin(h.app, typed.loginId, 'axis@777'));
 });
 
+test('meeting: opens by itself at the start time once locked, can be started early, and closes by itself', async () => {
+  const { issueVoterLogins, resolveVoterLogin } = await import('../lib/core/voterLogins');
+  const { applySchedule } = await import('../lib/core/elections');
+  const org = await seedOrg(h.admin, 'sched');
+  const mk = async (startsAt: Date, endsAt: Date) => {
+    const id = await createElection(h.app, org.orgId, org.maker, { title: 'CoC', kind: 'creditor_vote', startsAt, endsAt, autoStart: true });
+    await importRoll(h.app, org.orgId, org.maker, id, [{ eligibilityRef: 'Bank', votingUnits: 1 }]);
+    await setBallotDefinition(h.app, org.orgId, org.maker, id, { type: 'agenda', items: [{ id: 'A1', title: 'Plan', description: '',
+      minChoices: 1, maxChoices: 1, thresholdPct: 66, options: [{ id: 'O1', name: 'For' }, { id: 'O2', name: 'Against' }] }] });
+    return id;
+  };
+  const lock = async (id: string) => {
+    await submitForApproval(h.app, org.orgId, org.maker, id);
+    await approveElection(h.app, org.orgId, org.maker, id);
+    return (await issueVoterLogins(h.app, org.orgId, org.maker, id))[0];
+  };
+  const status = async (id: string) => withTenant(h.app, org.orgId, async (tx) => (await tx.query('SELECT status FROM elections WHERE id = $1', [id])).rows[0].status);
+
+  // Start time reached: nothing happens while setting up, it opens once locked.
+  const due = await mk(new Date(Date.now() - 1000), new Date(Date.now() + 1500));
+  assert.equal(await applySchedule(h.app, org.orgId, due), null);
+  await lock(due);
+  assert.equal(await applySchedule(h.app, org.orgId, due), 'open');
+  // Closing time passed: it closes by itself.
+  await new Promise((r) => setTimeout(r, 1700));
+  assert.equal(await applySchedule(h.app, org.orgId, due), 'closed');
+  assert.equal(await status(due), 'closed');
+
+  // Start time an hour away: stays shut, but the administrator can start early and votes count.
+  const later = await mk(new Date(Date.now() + 3600_000), new Date(Date.now() + 7200_000));
+  const login = await lock(later);
+  assert.equal(await applySchedule(h.app, org.orgId, later), null);
+  await transition(h.app, org.orgId, org.maker, later, 'open');
+  const t = await resolveVoterLogin(h.app, login.loginId, login.password);
+  assert.equal((await castVote(h.app, org.orgId, { electionId: later, credentialSecret: t!.secret, choices: { A1: 'O1' } })).status, 'accepted');
+});
+
 test('secret-ballot elections still need a second person to approve', async () => {
   const org = await seedOrg(h.admin, 'mc');
   const electionId = await createElection(h.app, org.orgId, org.maker, {

@@ -11,7 +11,9 @@ const toLocal = (d: Date) => new Date(d.getTime() + 5.5 * 3600_000).toISOString(
 export default async function NewMeeting() {
   const s = await requireSession();
   if (!can(s, 'manage')) redirect('/app');
-  const end = new Date(Date.now() + 3 * 24 * 3600_000);
+  // Default: voting opens in an hour (rounded to the hour) and stays open three days.
+  const start = new Date(Math.ceil((Date.now() + 3600_000) / 3600_000) * 3600_000);
+  const end = new Date(+start + 3 * 24 * 3600_000);
   return (
     <>
       <div className="page-head"><div><h1>New voting meeting</h1><p className="muted">Next you will add the questions and the voters.</p></div></div>
@@ -23,14 +25,17 @@ export default async function NewMeeting() {
           </div>
           <div className="row">
             <div className="field">
-              <label htmlFor="ends_at">Voting closes <span className="hint">IST</span></label>
-              <input id="ends_at" name="ends_at" type="datetime-local" required defaultValue={toLocal(end)} />
-              <div className="hint">Voting starts when you press Start voting, and you can end it earlier.</div>
+              <label htmlFor="starts_at">Voting starts <span className="hint">IST</span></label>
+              <input id="starts_at" name="starts_at" type="datetime-local" required defaultValue={toLocal(start)} />
             </div>
             <div className="field">
-              <label htmlFor="record_date">Record or cut-off date <span className="hint">optional</span></label>
-              <input id="record_date" name="record_date" type="date" />
+              <label htmlFor="ends_at">Voting closes <span className="hint">IST</span></label>
+              <input id="ends_at" name="ends_at" type="datetime-local" required defaultValue={toLocal(end)} />
             </div>
+          </div>
+          <div className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
+            Once you lock the meeting, voting opens by itself at the start time and closes by itself at the closing time.
+            You can also start it earlier or end it sooner. The record date is the voting start date.
           </div>
           <div className="notice info h-icon" style={{ alignItems: 'flex-start' }}>
             <Eye size={18} aria-hidden="true" style={{ marginTop: 2, flex: 'none' }} />
