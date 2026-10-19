@@ -86,12 +86,16 @@ export async function lockAndIssueIds(electionId: string): Promise<FormState & {
   }
 }
 
-/** New password for one voter; the login ID stays the same. */
-export async function resetVoterPassword(electionId: string, ref: string): Promise<FormState & { logins?: IssuedLogin[] }> {
+/** New password for one voter, generated or chosen by the administrator; the login ID stays the same. */
+export async function resetVoterPassword(electionId: string, ref: string, password?: string): Promise<FormState & { logins?: IssuedLogin[] }> {
   const s = await requireSession();
   try {
     requirePermission(s, 'manage');
-    const logins = await issueVoterLogins(await db(), s.orgId, s.userId, electionId, ref);
+    if (password !== undefined) {
+      const problem = chosenLoginProblem('VOTER', password);
+      if (problem) return { error: problem };
+    }
+    const logins = await issueVoterLogins(await db(), s.orgId, s.userId, electionId, ref, password);
     if (!logins.length) return { error: 'That voter was not found.' };
     return { ok: 'New password created.', logins };
   } catch (err) {

@@ -44,11 +44,11 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
   const missingIds = voters.filter((v) => !v.has_login).length;
 
   const steps = [
-    { key: 'questions', label: 'Questions', icon: ListChecks, done: !!def },
-    { key: 'voters', label: 'Voters', icon: Users, done: voters.length > 0 },
-    { key: 'ids', label: 'Voter IDs', icon: KeyRound, done: !draft },
-    { key: 'voting', label: 'Voting', icon: Radio, done: closed, live: e.status === 'open' },
-    { key: 'results', label: 'Results', icon: BarChart3, done: false, live: closed },
+    { key: 'questions', tab: 'questions', label: 'Questions', icon: ListChecks, done: !!def },
+    { key: 'voters', tab: 'voters', label: 'Voters', icon: Users, done: voters.length > 0 },
+    { key: 'ids', tab: 'overview', label: 'Voter IDs', icon: KeyRound, done: !draft },
+    { key: 'voting', tab: 'overview', label: 'Voting', icon: Radio, done: closed, live: e.status === 'open' },
+    { key: 'results', tab: 'results', label: 'Results', icon: BarChart3, done: false, live: closed },
   ];
   const current = steps.findIndex((st) => !st.done);
 
@@ -82,8 +82,8 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
           const state = st.done ? 'done' : i === current ? 'current' : '';
           const Icon = st.done ? CheckCircle2 : i === current ? CircleDot : Circle;
           return (
-            <li key={st.key} className={state} aria-current={i === current ? 'step' : undefined}>
-              <Icon size={18} aria-hidden="true" /><span>{i + 1}. {st.label}</span>
+            <li key={st.key} className={`${state}${st.tab === active ? ' viewing' : ''}`} aria-current={i === current ? 'step' : undefined}>
+              <Link href={`?tab=${st.tab}`} title={`Go to ${st.label}`}><Icon size={18} aria-hidden="true" /><span>{i + 1}. {st.label}</span></Link>
             </li>
           );
         })}

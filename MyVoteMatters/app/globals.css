@@ -427,3 +427,15 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
 .check input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--blue, #2746c7); }
 .check .hint { display: block; }
 .grid-2.tight { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* Step tracker: every step is a link, so the administrator can go back to Questions or Voters */
+.tracker li { padding: 0; }
+.tracker li > a { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: inherit; text-decoration: none; border-radius: 10px; width: 100%; min-width: 0; transition: box-shadow .15s, transform .15s; }
+.tracker li > a:hover { box-shadow: 0 0 0 2px var(--teal-strong) inset; transform: translateY(-1px); }
+.tracker li > a:focus-visible { outline: 2px solid var(--teal-strong); outline-offset: 2px; }
+.tracker li.viewing:not(.current) { box-shadow: 0 0 0 2px var(--navy) inset; }
+.tracker li > a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Set a voter's password by hand */
+.set-pw { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.set-pw input { width: 150px; padding: 6px 10px; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .tracker li > a { transition: none; } .tracker li > a:hover { transform: none; } }

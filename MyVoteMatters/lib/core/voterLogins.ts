@@ -80,10 +80,11 @@ export async function loginIdTaken(pool: pg.Pool, loginId: string) {
 /**
  * Gives a login ID and fresh password to every eligible voter without a live
  * credential, or, with `eligibilityRef`, resets that one voter's password
- * (their login ID stays the same). Allowed once the meeting is locked.
+ * (their login ID stays the same), to `chosenPassword` when the administrator
+ * gives one. Allowed once the meeting is locked.
  */
 export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: string, electionId: string,
-                                       eligibilityRef?: string): Promise<IssuedLogin[]> {
+                                       eligibilityRef?: string, chosenPassword?: string): Promise<IssuedLogin[]> {
   return withTenant(pool, orgId, async (tx) => {
     const { rows: [el] } = await tx.query(`SELECT status FROM elections WHERE id = $1 FOR UPDATE`, [electionId]);
     if (!el || !['approved', 'open'].includes(el.status)) {
@@ -131,11 +132,12 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
           if (ins.rowCount) break;
         }
       }
-      const password = newVoterPassword(r.eligibility_ref);
+      const chosen = !!(eligibilityRef && chosenPassword);
+      const password = chosen ? chosenPassword!.trim() : newVoterPassword(r.eligibility_ref);
       await tx.query(
         `INSERT INTO voting_credentials (organization_id, election_id, eligibility_id, credential_hash)
          VALUES (vs.current_org(), $1, $2, $3)`, [electionId, r.id, credentialHash(await voterLoginSecret(loginId, password))]);
-      issued.push({ eligibilityRef: r.eligibility_ref, votingUnits: r.voting_units, loginId: displayLoginId(loginId), password });
+      issued.push({ eligibilityRef: r.eligibility_ref, votingUnits: r.voting_units, loginId: displayLoginId(loginId), password, chosen });
     }
     await audit(tx, orgId, `user:${actorId}`, eligibilityRef ? 'voter.password_reset' : 'voter_ids.issued',
       `election:${electionId}`, eligibilityRef ? { voter: eligibilityRef } : { count: issued.length });

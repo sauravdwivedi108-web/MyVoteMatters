@@ -450,6 +450,10 @@ test('meeting: the administrator can choose a voter\'s own ID and password; IDs 
   assert.equal(reset.loginId, 'Sbi2026');
   assert.equal(await resolveVoterLogin(h.app, 'sbi2026', 'Secret55'), null);
   assert.ok(await resolveVoterLogin(h.app, 'sbi2026', reset.password));
+  // The administrator can also type the new password.
+  const [typed] = await issueVoterLogins(h.app, org.orgId, org.maker, electionId, 'Axis', 'Axis@777');
+  assert.deepEqual([typed.password, typed.chosen], ['Axis@777', true]);
+  assert.ok(await resolveVoterLogin(h.app, typed.loginId, 'axis@777'));
 });
 
 test('secret-ballot elections still need a second person to approve', async () => {

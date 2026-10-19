@@ -67,20 +67,38 @@ export function LockPanel({ action, meeting, org, loginUrl, disabled }: {
   );
 }
 
-/** Resets one voter's password and shows the new one once. */
-export function ResetPassword({ action, name }: { action: () => Promise<Result>; name: string }) {
+/** Resets one voter's password, to a generated one or one the administrator types, and shows it once. */
+export function ResetPassword({ action, name }: { action: (password?: string) => Promise<Result>; name: string }) {
   const [state, setState] = useState<Result>();
   const [pending, start] = useTransition();
+  const [typing, setTyping] = useState(false);
+  const [pw, setPw] = useState('');
   const l = state?.logins?.[0];
   if (l) return <div className="reset-out"><KeyRound size={14} aria-hidden="true" /> New password: <span className="mono"><strong>{l.password}</strong></span></div>;
   return (
-    <>
-      <button className="btn ghost small" disabled={pending} onClick={() => {
-        if (!window.confirm(`Create a new password for ${name}? Their old password stops working.`)) return;
-        start(async () => setState(await action()));
-      }}><RotateCcw size={14} aria-hidden="true" />{pending ? 'Resetting…' : 'Reset password'}</button>
+    <div className="row-btns">
+      {typing ? (
+        <form className="set-pw" onSubmit={(ev) => {
+          ev.preventDefault();
+          if (!window.confirm(`Set this password for ${name}? Their old password stops working.`)) return;
+          start(async () => setState(await action(pw)));
+        }}>
+          <input aria-label={`New password for ${name}`} value={pw} onChange={(ev) => setPw(ev.target.value)} minLength={5} maxLength={64}
+                 required autoComplete="off" spellCheck={false} placeholder="New password" />
+          <button className="btn small" disabled={pending}>{pending ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn ghost small" onClick={() => setTyping(false)}>Cancel</button>
+        </form>
+      ) : (
+        <>
+          <button className="btn ghost small" disabled={pending} onClick={() => {
+            if (!window.confirm(`Create a new password for ${name}? Their old password stops working.`)) return;
+            start(async () => setState(await action()));
+          }}><RotateCcw size={14} aria-hidden="true" />{pending ? 'Resetting…' : 'Reset password'}</button>
+          <button className="btn ghost small" onClick={() => setTyping(true)}><KeyRound size={14} aria-hidden="true" />Set password</button>
+        </>
+      )}
       {state?.error && <Notice state={state} />}
-    </>
+    </div>
   );
 }
 
