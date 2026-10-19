@@ -1,13 +1,13 @@
 import { Database, PlugZap, RefreshCw } from 'lucide-react';
-import { Brand } from './Brand';
+import { AuthFrame } from './AuthFrame';
 import { databaseEnvNames } from '@/lib/pool';
 
 export function SetupNeeded() {
   const names = databaseEnvNames();
   return (
-    <div className="auth-wrap">
-      <div className="card auth-card" style={{ maxWidth: 520 }}>
-        <Brand />
+    <AuthFrame>
+      <div className="auth-card wide">
+      <div className="card">
         <h1 className="h-icon"><Database size={24} aria-hidden="true" />Connect a database</h1>
         <p className="muted">The site is live. It needs a PostgreSQL database before anyone can sign in. This is a one-time step in Vercel.</p>
         <ol className="setup-steps">
@@ -25,6 +25,7 @@ export function SetupNeeded() {
             : <>no database settings at all. Either the database is not connected to this project yet, or the site has not been redeployed since connecting it.</>}
         </div>
       </div>
-    </div>
+      </div>
+    </AuthFrame>
   );
 }

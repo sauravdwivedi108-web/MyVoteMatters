@@ -365,7 +365,7 @@ function MeetingResults({ def, voters, total }: { def: AgendaBallot; voters: { v
   return (
     <div className="stack">
       {results.map((r, i) => (
-        <div key={r.id} className="item" style={{ background: '#fff' }}>
+        <div key={r.id} className="item">
           <div className="item-head" style={{ alignItems: 'flex-start' }}>
             <div>
               <div className="small muted">Question {i + 1}{r.thresholdPct !== undefined ? ` · needs ${r.thresholdPct}% of total voting share` : ` · top ${r.seats} ${r.seats === 1 ? 'wins' : 'win'}`}</div>

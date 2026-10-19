@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Brand } from '@/components/Brand';
+import { AuthFrame } from '@/components/AuthFrame';
 import { KeyRound, LogIn, ShieldCheck, UserRound } from 'lucide-react';
 
 export function VoterLogin() {
@@ -29,12 +29,11 @@ export function VoterLogin() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthFrame>
       <div className="auth-card">
-        <Brand />
         <div className="card">
           <div className="auth-badge"><UserRound size={22} aria-hidden="true" /></div>
-          <h1 style={{ fontSize: '1.5rem' }}>Voter login</h1>
+          <h1>Voter login</h1>
           <p className="muted">Enter the voter ID and password the administrator gave you.</p>
           {error && <div className="notice error" role="alert">{error}</div>}
           <form onSubmit={submit}>
@@ -58,6 +57,6 @@ export function VoterLogin() {
           Administrator? <Link href="/login">Admin login</Link>
         </p>
       </div>
-    </div>
+    </AuthFrame>
   );
 }

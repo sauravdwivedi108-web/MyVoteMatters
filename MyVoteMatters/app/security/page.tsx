@@ -6,7 +6,7 @@ export default function Security() {
   return (
     <>
       <SiteNav />
-      <main className="section prose">
+      <main className="section prose doc">
         <h1>How MyVoteMatters protects a vote</h1>
         <p className="muted">A plain account of what is enforced today and what is not yet.</p>
 

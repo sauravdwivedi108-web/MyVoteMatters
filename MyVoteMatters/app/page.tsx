@@ -26,9 +26,10 @@ export default function Home() {
   return (
     <>
       <div className="hero">
+        <img className="hero-scene" src="/hero-ballot.jpg" alt="" />
         <SiteNav />
         <div className="hero-inner">
-          <div>
+          <div className="hero-copy">
             <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
             <h1>Every vote recorded, weighted and audit-ready.</h1>
             <p className="lead">
@@ -39,13 +40,16 @@ export default function Home() {
               <Link href="/login" className="btn"><Building2 size={18} aria-hidden="true" /> Admin login</Link>
               <Link href="/voter" className="btn light"><UserRound size={18} aria-hidden="true" /> Voter login</Link>
             </div>
-            <p className="small" style={{ color: '#aab3cc', marginTop: 14 }}>New organisation? <Link href="/signup" style={{ color: '#fff' }}>Create an admin account</Link></p>
+            <p className="small hero-note">New organisation? <Link href="/signup">Create an admin account</Link></p>
           </div>
-          <div className="hero-card" aria-label="Example result">
-            <div className="small" style={{ color: '#c9cfe3' }}>Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
+        </div>
+      </div>
+      <section className="section exhibit">
+        <div className="card hero-card" aria-label="Example result">
+            <div className="small hero-caption">Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
             <div className="res">
               <div className="hero-opt">
-                <div><strong>Plan by Applicant A</strong><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
+                <div><strong>Plan by Applicant A</strong><span className="h-icon approved-mark"><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
                 <div className="meter"><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
                 <div className="small muted num">78.75% of total share · 2 voters</div>
               </div>
@@ -62,11 +66,10 @@ export default function Home() {
               <div><span>Edelweiss ARC</span><span>15.00%</span><span>Plan B</span></div>
               <div className="muted"><span>Operational creditors</span><span>6.25%</span><span>Did not vote</span></div>
             </div>
-            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 12, gap: 6 }}><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
-            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 6, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
-          </div>
+            <div className="small h-icon hero-trust"><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
+            <div className="small h-icon hero-trust"><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
         </div>
-      </div>
+      </section>
 
       <section className="section" id="how">
         <p className="kicker">How it works</p>
@@ -113,7 +116,7 @@ export default function Home() {
             <Link href="/voter" className="btn teal">Voter login <ArrowRight size={18} aria-hidden="true" /></Link>
           </div>
         </div>
-        <p className="small muted" style={{ marginTop: 22, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <p className="small muted disclaimer">
           <FileSpreadsheet size={16} aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} />
           Pilot software: not yet independently certified. Confirm voting thresholds and procedure for each proceeding with your legal advisor.
         </p>

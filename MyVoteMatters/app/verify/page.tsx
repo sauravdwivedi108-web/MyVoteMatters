@@ -8,7 +8,7 @@ export default function Verify() {
   return (
     <>
       <SiteNav />
-      <main className="section" style={{ maxWidth: 620 }}>
+      <main className="section doc narrow">
         <h1>Verify a vote receipt</h1>
         <p className="muted">Check that a ballot was accepted. The receipt proves acceptance only; the receipt alone never reveals how anyone voted.</p>
         <Suspense><VerifyForm /></Suspense>

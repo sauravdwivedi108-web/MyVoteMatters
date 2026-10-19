@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Brand } from '@/components/Brand';
+import { AuthFrame } from '@/components/AuthFrame';
 import { ActionForm, Submit } from '@/components/forms';
 import { SetupNeeded } from '@/components/SetupNeeded';
 import { login } from '@/lib/actions';
@@ -15,12 +15,11 @@ export default async function Login() {
   if (!hasDatabase()) return <SetupNeeded />;
   if (await getSession()) redirect('/app');
   return (
-    <div className="auth-wrap">
+    <AuthFrame>
       <div className="auth-card">
-        <Brand />
         <div className="card">
         <div className="auth-badge"><Building2 size={22} aria-hidden="true" /></div>
-        <h1 style={{ fontSize: '1.5rem' }}>Admin login</h1>
+        <h1>Admin login</h1>
         <p className="muted">For administrators who set up meetings and voters. Voters log in at the <Link href="/voter">voter login</Link>.</p>
         <ActionForm action={login}>
           <div className="field"><label htmlFor="email">Email, username or voter ID</label><input id="email" name="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required /></div>
@@ -30,6 +29,6 @@ export default async function Login() {
         <p className="small muted" style={{ marginTop: 16 }}>New organisation? <Link href="/signup">Create an admin account</Link></p>
         </div>
       </div>
-    </div>
+    </AuthFrame>
   );
 }

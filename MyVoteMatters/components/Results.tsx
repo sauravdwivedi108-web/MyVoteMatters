@@ -13,7 +13,7 @@ export function Results({ definition, result }: { definition: BallotDefinition; 
           const f = BigInt(r.units.for), a = BigInt(r.units.against), ab = BigInt(r.units.abstain);
           const cast = f + a;
           return (
-            <div key={r.id} className="item" style={{ background: '#fff' }}>
+            <div key={r.id} className="item">
               <div className="item-head" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <div className="small muted">Resolution {i + 1} · {r.majority === 'special' ? 'Special' : 'Ordinary'} resolution</div>
@@ -45,7 +45,7 @@ export function Results({ definition, result }: { definition: BallotDefinition; 
           const top = it.options.reduce((m, o) => (BigInt(o.votes) > m ? BigInt(o.votes) : m), 0n);
           const sorted = [...it.options].sort((x, y) => (BigInt(y.votes) > BigInt(x.votes) ? 1 : BigInt(y.votes) < BigInt(x.votes) ? -1 : 0));
           return (
-            <div key={it.id} className="item" style={{ background: '#fff' }}>
+            <div key={it.id} className="item">
               <div className="item-head" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <div className="small muted">Item {i + 1} · {d ? picksLabel(d.minChoices, d.maxChoices) : ''} · {it.thresholdPct !== undefined
