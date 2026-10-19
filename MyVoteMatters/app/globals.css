@@ -118,7 +118,7 @@ td.r, th.r { text-align: right; }
 .site-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px clamp(16px, 4vw, 48px); max-width: 1180px; margin: 0 auto; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--navy); letter-spacing: -0.02em; }
 .brand:hover { text-decoration: none; }
-.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--violet), var(--teal)); display: grid; place-items: center; color: #fff; font-size: 16px; }
+.brand-mark { width: 34px; height: 34px; display: block; flex: none; object-fit: contain; }
 .site-nav nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .site-nav nav a.link { color: var(--text); padding: 8px 10px; border-radius: 8px; font-weight: 550; font-size: 0.93rem; }
 .hero { background: var(--navy); color: #fff; position: relative; overflow: hidden; }
