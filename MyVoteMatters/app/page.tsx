@@ -26,6 +26,7 @@ export default function Home() {
   return (
     <>
       <div className="hero">
+        <img className="hero-scene" src="/hero-ballot.jpg" alt="" />
         <SiteNav />
         <div className="hero-inner">
           <div className="hero-copy">
@@ -41,11 +42,14 @@ export default function Home() {
             </div>
             <p className="small hero-note">New organisation? <Link href="/signup">Create an admin account</Link></p>
           </div>
-          <div className="hero-card" aria-label="Example result">
+        </div>
+      </div>
+      <section className="section exhibit">
+        <div className="card hero-card" aria-label="Example result">
             <div className="small hero-caption">Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
             <div className="res">
               <div className="hero-opt">
-                <div><strong>Plan by Applicant A</strong><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
+                <div><strong>Plan by Applicant A</strong><span className="h-icon approved-mark"><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
                 <div className="meter"><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
                 <div className="small muted num">78.75% of total share · 2 voters</div>
               </div>
@@ -64,9 +68,8 @@ export default function Home() {
             </div>
             <div className="small h-icon hero-trust"><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
             <div className="small h-icon hero-trust"><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
-          </div>
         </div>
-      </div>
+      </section>
 
       <section className="section" id="how">
         <p className="kicker">How it works</p>
