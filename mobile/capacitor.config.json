@@ -1,0 +1,22 @@
+{
+  "appId": "com.myvotematters.app",
+  "appName": "MyVoteMatters",
+  "webDir": "www",
+  "server": {
+    "url": "https://my-vote-matters-three.vercel.app",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#635BFF"
+    }
+  }
+}
