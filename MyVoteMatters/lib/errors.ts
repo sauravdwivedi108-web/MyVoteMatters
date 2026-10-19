@@ -9,6 +9,7 @@ const MESSAGES: Record<string, string> = {
   results_suppressed: 'Ballots can only be counted after the election is closed.',
   reconciliation_failed: 'Counting stopped: the ballots do not reconcile with the votes recorded. Nothing was published.',
   definition_mismatch: 'The ballot no longer matches the approved version. Counting stopped.',
+  login_taken: 'A chosen voter ID is already in use.',
   forbidden: 'Your role does not allow this action.',
 };
 
@@ -21,6 +22,7 @@ export function friendlyError(err: unknown): string {
     if (!raw.startsWith(key)) continue;
     const detail = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1).trim() : '';
     if (key === 'invalid_ballot' && detail) return `${msg}: ${detail}`;
+    if (key === 'login_taken' && detail) return detail.charAt(0).toUpperCase() + detail.slice(1) + '. Remove that voter and add them again with another ID.';
     if (key === 'forbidden' && detail) return detail.charAt(0).toUpperCase() + detail.slice(1) + '.';
     return msg;
   }

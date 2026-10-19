@@ -87,15 +87,16 @@ export async function getOpenVoteReport(s: Session, electionId: string): Promise
     `SELECT eligibility_ref, voting_units::text, voted, cast_at, choices FROM vs.open_vote_report($1)`, [electionId])).rows);
 }
 
-export type MeetingVoter = OpenVoteRow & { login_id: string | null; has_login: boolean };
+export type MeetingVoter = OpenVoteRow & { login_id: string | null; has_login: boolean; chosen_login_id: string | null };
 
 /** Every voter in a meeting with login ID and voting status; choices only once voting has closed. */
 export async function getMeetingVoters(s: Session, electionId: string): Promise<MeetingVoter[]> {
   return withTenant(await db(), s.orgId, async (tx) => (await tx.query(
-    `SELECT r.eligibility_ref, r.voting_units::text, r.voted, r.cast_at, r.choices, l.login_id, c.id IS NOT NULL AS has_login
+    `SELECT r.eligibility_ref, r.voting_units::text, r.voted, r.cast_at, r.choices, l.login_id, c.id IS NOT NULL AS has_login, ch.login_id AS chosen_login_id
        FROM vs.open_vote_report($1) r
        JOIN voter_eligibility e ON e.election_id = $1 AND e.eligibility_ref = r.eligibility_ref
        LEFT JOIN voter_logins l ON l.eligibility_id = e.id
+       LEFT JOIN voter_login_choices ch ON ch.eligibility_id = e.id
        LEFT JOIN voting_credentials c ON c.eligibility_id = e.id AND c.revoked_at IS NULL`, [electionId])).rows);
 }
 

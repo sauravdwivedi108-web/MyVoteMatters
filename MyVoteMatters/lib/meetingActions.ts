@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from './pool';
 import { createElection, importRoll, submitForApproval, approveElection, transition, extendVoting as extendCore } from './core/elections';
-import { issueVoterLogins, type IssuedLogin } from './core/voterLogins';
+import { issueVoterLogins, chooseVoterLogin, chosenLoginProblem, loginIdTaken, displayLoginId, type IssuedLogin } from './core/voterLogins';
 import { requirePermission, requireSession } from './auth';
 import { friendlyError } from './errors';
 import type { FormState } from './actions';
@@ -32,21 +32,39 @@ export async function createMeeting(_: FormState, fd: FormData): Promise<FormSta
   redirect(`/app/elections/${id}?tab=questions`);
 }
 
-/** Adds one voter by name and weight. */
+/**
+ * Adds one voter by name and weight. With "create automatically" unticked the
+ * administrator gives the voter's login ID and password here instead.
+ */
 export async function addVoter(electionId: string, _: FormState, fd: FormData): Promise<FormState> {
   const s = await requireSession();
+  let chosenId = '';
   try {
     requirePermission(s, 'manage');
     const name = str(fd, 'name');
     const weight = str(fd, 'weight').replace(/[₹,\s]/g, '');
     if (!name) return { error: 'Enter the voter’s name.' };
-    const r = await importRoll(await db(), s.orgId, s.userId, electionId, [{ eligibilityRef: name, votingUnits: weight || '1' }]);
+    const pool = await db();
+    const custom = fd.get('auto_login') !== 'on';
+    const loginId = str(fd, 'login_id'), password = str(fd, 'password');
+    if (custom) {
+      const problem = chosenLoginProblem(loginId, password);
+      if (problem) return { error: problem };
+      if (await loginIdTaken(pool, loginId)) return { error: `The voter ID ${displayLoginId(loginId.toUpperCase())} is already in use. Choose another.` };
+    }
+    const r = await importRoll(pool, s.orgId, s.userId, electionId, [{ eligibilityRef: name, votingUnits: weight || '1' }]);
     if (r.rejected.length) return { error: `${name}: ${r.rejected[0].reason}` };
+    if (custom) {
+      if (!await chooseVoterLogin(pool, s.orgId, electionId, name, loginId, password)) {
+        return { error: `${name} was added, but the voter ID ${displayLoginId(loginId.toUpperCase())} was just taken. Remove ${name} and add them again with another ID.` };
+      }
+      chosenId = displayLoginId(loginId.trim().toUpperCase());
+    }
   } catch (err) {
     return { error: friendlyError(err) };
   }
   revalidatePath(`/app/elections/${electionId}`);
-  return { ok: 'Voter added.' };
+  return { ok: chosenId ? `Voter added with ID ${chosenId} and the password you chose.` : 'Voter added.' };
 }
 
 /**

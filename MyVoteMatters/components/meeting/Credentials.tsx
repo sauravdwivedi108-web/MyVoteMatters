@@ -13,7 +13,7 @@ type Result = FormState & { logins?: IssuedLogin[] };
 export function LoginSheet({ logins, meeting, org, loginUrl }: { logins: IssuedLogin[]; meeting: string; org: string; loginUrl: string }) {
   const file = `voter-ids-${meeting.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
   const csv = ['Voter,Voting weight,Voter ID,Password,Login at', ...logins.map((l) =>
-    [l.eligibilityRef, l.votingUnits, l.loginId, l.password, loginUrl].map(csvCell).join(','))].join('\n');
+    [l.eligibilityRef, l.votingUnits, l.loginId, l.chosen ? '(chosen by administrator)' : l.password, loginUrl].map(csvCell).join(','))].join('\n');
   return (
     <div className="login-sheet">
       <div className="notice warn no-print">
@@ -31,7 +31,7 @@ export function LoginSheet({ logins, meeting, org, loginUrl }: { logins: IssuedL
             <strong>{l.eligibilityRef}</strong>
             <dl>
               <dt>Voter ID</dt><dd className="mono">{l.loginId}</dd>
-              <dt>Password</dt><dd className="mono">{l.password}</dd>
+              <dt>Password</dt>{l.chosen ? <dd className="muted">Chosen by you when adding</dd> : <dd className="mono">{l.password}</dd>}
             </dl>
             <div className="small muted">Log in at {loginUrl}</div>
           </div>
@@ -111,5 +111,29 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
     }}>
       {done ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />} {done ? 'Copied' : label}
     </button>
+  );
+}
+
+/**
+ * "Create ID and password automatically" is ticked by default; unticking it
+ * lets the administrator type this voter's own login ID and password.
+ */
+export function LoginChoiceFields() {
+  const [auto, setAuto] = useState(true);
+  return (
+    <>
+      <label className="check">
+        <input type="checkbox" name="auto_login" checked={auto} onChange={(ev) => setAuto(ev.target.checked)} />
+        <span>Create voter ID and password automatically <span className="hint">e.g. Gauredit6 / Gaur7k2m9</span></span>
+      </label>
+      {!auto && (
+        <div className="grid-2 tight">
+          <div className="field"><label htmlFor="vlogin">Voter ID <span className="hint">3–32 letters or digits</span></label>
+            <input id="vlogin" name="login_id" type="text" required autoComplete="off" autoCapitalize="none" spellCheck={false} pattern="[A-Za-z0-9\-]{3,32}" placeholder="e.g. SBI2026" /></div>
+          <div className="field"><label htmlFor="vpass">Password <span className="hint">at least 5 characters</span></label>
+            <input id="vpass" name="password" type="text" required minLength={5} maxLength={64} autoComplete="new-password" spellCheck={false} placeholder="e.g. sbi@55555" /></div>
+        </div>
+      )}
+    </>
   );
 }

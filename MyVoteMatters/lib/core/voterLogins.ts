@@ -42,7 +42,40 @@ export async function voterLoginSecret(loginId: string, password: string) {
   return (await scrypt(password.trim().toLowerCase(), `myvotematters-voter:${normaliseLoginId(loginId)}`, 32)).toString('base64url');
 }
 
-export type IssuedLogin = { eligibilityRef: string; votingUnits: string; loginId: string; password: string };
+/** `password` is empty when the administrator chose it while adding the voter. */
+export type IssuedLogin = { eligibilityRef: string; votingUnits: string; loginId: string; password: string; chosen?: boolean };
+
+/** Why an administrator-chosen login ID or password cannot be used, or null if it can. */
+export function chosenLoginProblem(loginId: string, password: string): string | null {
+  if (!/^[A-Z0-9-]{3,32}$/.test(normaliseLoginId(loginId))) return 'The voter ID must be 3 to 32 letters or digits, with no spaces.';
+  if (password.trim().length < 5 || password.trim().length > 64) return 'The password must be at least 5 characters.';
+  return null;
+}
+
+/**
+ * Keeps the login ID and password the administrator chose for a voter on the
+ * draft list. Only the credential hash is kept; the login is created when the
+ * meeting is locked, like generated ones.
+ */
+export async function chooseVoterLogin(pool: pg.Pool, orgId: string, electionId: string, eligibilityRef: string,
+                                       loginId: string, password: string) {
+  const id = normaliseLoginId(loginId);
+  const hash = credentialHash(await voterLoginSecret(id, password));
+  return withTenant(pool, orgId, async (tx) => {
+    if ((await tx.query('SELECT vs.login_id_taken($1) AS taken', [id])).rows[0].taken) return false;
+    const ins = await tx.query(
+      `INSERT INTO voter_login_choices (eligibility_id, organization_id, election_id, login_id, credential_hash)
+       SELECT e.id, vs.current_org(), e.election_id, $3, $4 FROM voter_eligibility e
+        WHERE e.election_id = $1 AND e.eligibility_ref = $2
+       ON CONFLICT DO NOTHING`, [electionId, eligibilityRef, id, hash]);
+    return ins.rowCount === 1;
+  });
+}
+
+/** Whether a login ID is already used by any meeting. */
+export async function loginIdTaken(pool: pg.Pool, loginId: string) {
+  return withTenant(pool, null, async (tx) => (await tx.query('SELECT vs.login_id_taken($1) AS taken', [normaliseLoginId(loginId)])).rows[0].taken as boolean);
+}
 
 /**
  * Gives a login ID and fresh password to every eligible voter without a live
@@ -72,11 +105,26 @@ export async function issueVoterLogins(pool: pg.Pool, orgId: string, actorId: st
     const issued: IssuedLogin[] = [];
     for (const r of rows) {
       let loginId: string = r.login_id;
+      const { rows: [choice] } = loginId ? { rows: [] } : await tx.query(
+        `DELETE FROM voter_login_choices WHERE eligibility_id = $1 RETURNING login_id, credential_hash`, [r.id]);
+      if (choice) {
+        loginId = choice.login_id;
+        const ins = await tx.query(
+          `INSERT INTO voter_logins (login_id, organization_id, election_id, eligibility_id)
+           VALUES ($1, vs.current_org(), $2, $3) ON CONFLICT (login_id) DO NOTHING`, [loginId, electionId, r.id]);
+        if (!ins.rowCount) throw new Error(`login_taken: the voter ID ${displayLoginId(loginId)} chosen for ${r.eligibility_ref} is already in use`);
+        await tx.query(
+          `INSERT INTO voting_credentials (organization_id, election_id, eligibility_id, credential_hash)
+           VALUES (vs.current_org(), $1, $2, $3)`, [electionId, r.id, choice.credential_hash]);
+        issued.push({ eligibilityRef: r.eligibility_ref, votingUnits: r.voting_units, loginId: displayLoginId(loginId), password: '', chosen: true });
+        continue;
+      }
       if (!loginId) {
         const base = normaliseLoginId(newLoginId(r.eligibility_ref, org.name));
         for (let n = 0; ; n++) {
           // A clash (same name start, company and hour) gets a letter: GAUREDIT6, GAUREDIT6B, GAUREDIT6C...
           loginId = n === 0 ? base : n < 26 ? base + String.fromCharCode(65 + n) : `${base}${pick(ID_CHARS, 3)}`;
+          if ((await tx.query('SELECT vs.login_id_taken($1) AS taken', [loginId])).rows[0].taken) continue;
           const ins = await tx.query(
             `INSERT INTO voter_logins (login_id, organization_id, election_id, eligibility_id)
              VALUES ($1, vs.current_org(), $2, $3) ON CONFLICT (login_id) DO NOTHING`, [loginId, electionId, r.id]);

@@ -12,7 +12,7 @@ import { ActionForm, ActionButton, Submit } from '../forms';
 import { BallotBuilder } from '../BallotBuilder';
 import { OpenVoteReport } from '../OpenVoteReport';
 import { ist, units } from '../Status';
-import { LockPanel, ResetPassword, IssueMissing, PrintButton, CopyButton } from './Credentials';
+import { LockPanel, ResetPassword, IssueMissing, PrintButton, CopyButton, LoginChoiceFields } from './Credentials';
 import {
   ListChecks, Users, KeyRound, Radio, BarChart3, History, PlayCircle, StopCircle, ShieldCheck, ShieldAlert, Trash2, X,
   CheckCircle2, CircleDot, Circle, ArrowRight, Link2, UserPlus, Upload, Scale, Clock, LayoutDashboard, CalendarClock,
@@ -193,6 +193,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
                   <div className="field"><label htmlFor="vname">Name</label><input id="vname" name="name" type="text" required placeholder="e.g. State Bank of India" /></div>
                   <div className="field"><label htmlFor="vweight">Voting weight <span className="hint">shares held or admitted claim in ₹, whole number</span></label>
                     <input id="vweight" name="weight" type="text" inputMode="numeric" required placeholder="e.g. 4,50,00,000" /></div>
+                  <LoginChoiceFields />
                   <Submit pendingText="Adding…"><UserPlus size={18} aria-hidden="true" /> Add voter</Submit>
                 </ActionForm>
               </div>
@@ -224,7 +225,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
                   <tbody>
                     {voters.map((v) => (
                       <tr key={v.eligibility_ref}>
-                        <td><strong>{v.eligibility_ref}</strong></td>
+                        <td><strong>{v.eligibility_ref}</strong>{draft && v.chosen_login_id && <div className="small muted">Your chosen ID: <span className="mono">{displayLoginId(v.chosen_login_id)}</span></div>}</td>
                         <td className="r num">{units(v.voting_units)}</td>
                         <td className="r num">{share(v.voting_units, total)}</td>
                         {!draft && <td className="mono">{v.login_id ? displayLoginId(v.login_id) : '—'}</td>}

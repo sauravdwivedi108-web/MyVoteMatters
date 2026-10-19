@@ -418,6 +418,40 @@ test('meeting: single admin locks, voters log in with ID and password, named res
   assert.deepEqual(r.selected, ['O1']);
 });
 
+test('meeting: the administrator can choose a voter\'s own ID and password; IDs stay unique across organisations', async () => {
+  const { issueVoterLogins, resolveVoterLogin, chooseVoterLogin, loginIdTaken } = await import('../lib/core/voterLogins');
+  const org = await seedOrg(h.admin, 'choose');
+  const other = await seedOrg(h.admin, 'choose2');
+  const mk = async (o: typeof org) => {
+    const id = await createElection(h.app, o.orgId, o.maker, {
+      title: 'CoC', kind: 'creditor_vote', startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 60_000) });
+    await importRoll(h.app, o.orgId, o.maker, id, [{ eligibilityRef: 'SBI', votingUnits: 600 }, { eligibilityRef: 'Axis', votingUnits: 400 }]);
+    await setBallotDefinition(h.app, o.orgId, o.maker, id, { type: 'agenda', items: [{ id: 'A1', title: 'Plan', description: '',
+      minChoices: 1, maxChoices: 1, thresholdPct: 66, options: [{ id: 'O1', name: 'For' }, { id: 'O2', name: 'Against' }] }] });
+    return id;
+  };
+  const electionId = await mk(org);
+  assert.equal(await chooseVoterLogin(h.app, org.orgId, electionId, 'SBI', 'sbi2026', 'Secret55'), true);
+  assert.equal(await loginIdTaken(h.app, 'SBI2026'), true);
+  // Another organisation cannot take the same ID, and the voter cannot log in before the meeting is locked.
+  const otherId = await mk(other);
+  assert.equal(await chooseVoterLogin(h.app, other.orgId, otherId, 'SBI', 'Sbi2026', 'x12345'), false);
+  assert.equal(await resolveVoterLogin(h.app, 'sbi2026', 'Secret55'), null);
+
+  await submitForApproval(h.app, org.orgId, org.maker, electionId);
+  await approveElection(h.app, org.orgId, org.maker, electionId);
+  const logins = await issueVoterLogins(h.app, org.orgId, org.maker, electionId);
+  const sbi = logins.find((l) => l.eligibilityRef === 'SBI')!;
+  assert.deepEqual([sbi.loginId, sbi.password, sbi.chosen], ['Sbi2026', '', true]);
+  assert.match(logins.find((l) => l.eligibilityRef === 'Axis')!.password, /^Axis[a-z2-9]{5}$/);
+  // The chosen password works, typed in any case; a reset replaces it with a generated one under the same ID.
+  assert.ok(await resolveVoterLogin(h.app, 'SBI2026', 'secret55'));
+  const [reset] = await issueVoterLogins(h.app, org.orgId, org.maker, electionId, 'SBI');
+  assert.equal(reset.loginId, 'Sbi2026');
+  assert.equal(await resolveVoterLogin(h.app, 'sbi2026', 'Secret55'), null);
+  assert.ok(await resolveVoterLogin(h.app, 'sbi2026', reset.password));
+});
+
 test('secret-ballot elections still need a second person to approve', async () => {
   const org = await seedOrg(h.admin, 'mc');
   const electionId = await createElection(h.app, org.orgId, org.maker, {
