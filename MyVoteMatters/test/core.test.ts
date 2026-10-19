@@ -382,7 +382,7 @@ test('meeting: single admin locks, voters log in with ID and password, named res
   assert.equal(logins.length, 3);
   // Name (4) + company (last 4) + hour; same-name clashes get a letter. Password: name (4) + 5 letters or digits.
   for (const l of logins) {
-    assert.match(l.loginId, /^Bank[a-z]{1,4}\d{1,2}[a-z]?$/);
+    assert.match(l.loginId, /^Bank[a-z]{1,4}\d{1,2}[A-Z]?$/);
     assert.match(l.password, /^Bank[a-z2-9]{5}$/);
   }
   assert.equal(new Set(logins.map((l) => l.loginId.toLowerCase())).size, 3);

@@ -29,7 +29,7 @@ export const newLoginId = (name: string, org: string, at = new Date()) => `${nam
 /** e.g. "Gaur" + 5 random letters or digits: "Gaur7k2m9". Typed case-insensitively. */
 export const newVoterPassword = (name: string) => `${namePart(name)}${pick(PW_CHARS, 5)}`;
 /** IDs are stored upper-case and matched without regard to case; shown as "Gauredit6". */
-export const displayLoginId = (id: string) => /^MV-/.test(id) ? id : cap(id);
+export const displayLoginId = (id: string) => /^MV-/.test(id) ? id : cap(id).replace(/(\d)([a-z])$/, (_, d, l) => d + l.toUpperCase());
 
 export const normaliseLoginId = (v: string) => v.trim().toUpperCase().replace(/\s+/g, '');
 

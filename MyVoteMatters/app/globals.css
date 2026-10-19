@@ -416,3 +416,8 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
   .item, tr { break-inside: avoid; }
   .page-head, .next-card, .tracker, .meta-row, .breadcrumb, .card-head .btn, .card .btn { display: none !important; }
 }
+
+/* Voter header on phones: keep "Log out" on one line, org name truncates */
+.voter-top-right { min-width: 0; }
+.voter-top-right .btn { white-space: nowrap; flex-shrink: 0; }
+.voter-top-right > .small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }

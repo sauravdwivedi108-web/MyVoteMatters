@@ -66,7 +66,7 @@ export async function Meeting({ e, s, tab }: { e: ElectionDetail; s: Session; ta
           <h1 style={{ marginTop: 4 }}>{e.title}</h1>
           <div className="meta-row">
             <span className={`badge ${badge}`}>{label}</span>
-            <span className="small muted h-icon" style={{ gap: 6 }}><Clock size={14} aria-hidden="true" /> Voting closes {ist(e.ends_at)}</span>
+            <span className="small muted h-icon" style={{ gap: 6 }}><Clock size={14} aria-hidden="true" /> {closedAt ? <>Voting ended {ist(closedAt)}</> : <>Voting closes {ist(e.ends_at)}</>}</span>
           </div>
         </div>
         {draft && manage && (
