@@ -110,7 +110,7 @@ export function VoterApp() {
   );
 
   if (error && !ballot) return shell(<><div className="notice error" role="alert">{error}</div><Link className="btn secondary" href="/voter">Go to voter login</Link></>);
-  if (!ballot || stage === 'loading') return shell(<p className="muted" aria-live="polite">Loading your ballot…</p>);
+  if (!ballot || stage === 'loading') return shell(<p className="muted loading-line" aria-live="polite">Loading your ballot…</p>);
 
   const summaryTable = (def: BallotDefinition) => (
     def.type === 'resolutions' ? (
@@ -144,7 +144,7 @@ export function VoterApp() {
   if (stage === 'done' && receipt) {
     const verify = `/verify?o=${encodeURIComponent(token!.split('.')[0])}&e=${encodeURIComponent(token!.split('.')[1])}&r=${receipt}`;
     return shell(
-      <div className="card" style={{ textAlign: 'center' }}>
+      <div className="card center-card">
         <div className="big-check" aria-hidden="true"><CheckCircle2 size={36} /></div>
         <h1>Your vote has been recorded</h1>
         <p className="muted">{ballot.title}</p>
@@ -173,7 +173,7 @@ export function VoterApp() {
 
   if (ballot.already_voted) {
     return shell(
-      <div className="card">
+      <div className="card center-card">
         <div className="big-check" aria-hidden="true"><CheckCircle2 size={36} /></div>
         <h1>You have already voted</h1>
         <p>A ballot has been recorded for this entitlement in <strong>{ballot.title}</strong>. Each entitlement votes once and votes cannot be changed.</p>
@@ -185,8 +185,8 @@ export function VoterApp() {
   if (ballot.status !== 'open' || !ballot.definition) {
     const ended = ballot.status !== 'open' && ['closed', 'tallied', 'published'].includes(ballot.status);
     return shell(
-      <div className="card">
-        <div className="big-check" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }} aria-hidden="true"><Clock size={32} /></div>
+      <div className="card center-card">
+        <div className="big-check wait" aria-hidden="true"><Clock size={32} /></div>
         <h1>{ballot.title}</h1>
         <p>{ended ? 'Voting has closed.'
           : ballot.kind === 'creditor_vote' && ballot.auto_start

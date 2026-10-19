@@ -19,9 +19,16 @@ export function SiteNav() {
 export function SiteFooter() {
   return (
     <footer className="footer">
-      <div className="section">
-        <span>© {new Date().getFullYear()} MyVoteMatters. Pilot software, not yet independently certified.</span>
-        <span><Link href="/security">Security</Link> · <Link href="/voter">Voter login</Link> · <Link href="/login">Admin login</Link></span>
+      <div className="section footer-inner">
+        <div>
+          <Brand />
+          <p>© {new Date().getFullYear()} MyVoteMatters. Pilot software, not yet independently certified.</p>
+        </div>
+        <nav aria-label="Footer">
+          <Link href="/security">Security</Link>
+          <Link href="/voter">Voter login</Link>
+          <Link href="/login">Admin login</Link>
+        </nav>
       </div>
     </footer>
   );

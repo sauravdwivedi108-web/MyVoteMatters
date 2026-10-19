@@ -16,7 +16,7 @@ export default async function PublicResults({ params }: { params: Promise<{ org:
   return (
     <>
       <SiteNav />
-      <main className="section" style={{ maxWidth: 860 }}>
+      <main className="section doc" style={{ maxWidth: 860 }}>
         <div className="small muted">{r.org_name} · {kindLabel(r.kind)}</div>
         <h1>{r.title}: results</h1>
         <p className="muted">Counted {ist(r.completed_at)}. Turnout {r.turnout.voted} of {r.turnout.eligible} entitlements, {units(r.turnout.units_voted)} of {units(r.turnout.units_eligible)} voting units.</p>

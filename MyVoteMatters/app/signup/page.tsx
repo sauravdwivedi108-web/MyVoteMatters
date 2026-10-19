@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Brand } from '@/components/Brand';
+import { AuthFrame } from '@/components/AuthFrame';
 import { ActionForm, Submit } from '@/components/forms';
 import { SetupNeeded } from '@/components/SetupNeeded';
 import { signup } from '@/lib/actions';
@@ -14,10 +14,10 @@ export default async function Signup() {
   if (!hasDatabase()) return <SetupNeeded />;
   if (await getSession()) redirect('/app');
   return (
-    <div className="auth-wrap">
-      <div className="card auth-card">
-        <Brand />
-        <h1 style={{ fontSize: '1.5rem' }}>Create an admin account</h1>
+    <AuthFrame>
+      <div className="auth-card">
+      <div className="card">
+        <h1>Create an admin account</h1>
         <p className="muted">For the company, insolvency professional or firm running the vote. You become the admin with full control.</p>
         <ActionForm action={signup}>
           <div className="field"><label htmlFor="org">Company or firm name</label><input id="org" name="org" type="text" required placeholder="e.g. ABC Steel Ltd (under CIRP) or your firm" /></div>
@@ -31,6 +31,7 @@ export default async function Signup() {
         </ActionForm>
         <p className="small muted" style={{ marginTop: 16 }}>Already have an account? <Link href="/login">Admin login</Link></p>
       </div>
-    </div>
+      </div>
+    </AuthFrame>
   );
 }
