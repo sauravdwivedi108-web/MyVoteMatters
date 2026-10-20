@@ -90,6 +90,7 @@ export async function logout() {
 
 export async function addMember(_: FormState, fd: FormData): Promise<FormState> {
   const s = await requireSession();
+  let kept = false;
   try {
     requirePermission(s, 'team');
     const email = str(fd, 'email').toLowerCase();
@@ -100,8 +101,9 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
     if (!['election_admin', 'approver', 'scrutinizer', 'viewer', 'owner'].includes(role)) return { error: 'Choose a role.' };
     if (password.length < 5) return { error: 'Set a temporary password of at least 5 characters.' };
     const hash = await hashPassword(password);
-    await withTenant(await db(), s.orgId, async (tx) => {
+    kept = await withTenant(await db(), s.orgId, async (tx) => {
       let { rows: [u] } = await tx.query(`SELECT id, password_hash FROM users WHERE email_normalized = $1`, [email]);
+      const hadPassword = !!u?.password_hash;
       if (!u) {
         ({ rows: [u] } = await tx.query(
           `INSERT INTO users (email_normalized, display_name, password_hash) VALUES ($1, $2, $3) RETURNING id`, [email, name, hash]));
@@ -111,11 +113,14 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
       }
       await tx.query(`INSERT INTO memberships (organization_id, user_id, role) VALUES (vs.current_org(), $1, $2)`, [u.id, role]);
       await audit(tx, s.orgId, `user:${s.userId}`, 'member.added', `user:${u.id}`, { role });
+      return hadPassword;
     });
   } catch (err) {
     return { error: friendlyError(err) };
   }
   revalidatePath('/app/team');
+  // Someone who already has an account keeps their own password; the one typed here is not applied.
+  if (kept) return { ok: `Member added. This username or email already had an account, so they log in with their existing password, not the one typed here. Use Reset password below if they need a new one.` };
   return { ok: 'Member added. Share the temporary password with them directly.' };
 }
 
