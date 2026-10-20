@@ -459,3 +459,52 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
 @keyframes mvm-seal-pop { from { opacity: 0; transform: scale(0) rotate(-120deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 @keyframes mvm-shine { from { transform: skewX(-18deg) translateX(0); } to { transform: skewX(-18deg) translateX(190px); } }
 @media (prefers-reduced-motion: reduce) { .mvm-logo * { animation: none !important; } }
+
+/* ===================== Site motion ===================== */
+/* Scroll reveal: html.motion is set before paint; components/Motion.tsx adds .rv-in. */
+html.motion :is(.main .card, .main .page-head, .main .meeting-card, .main .stat, .main .question, .main .choice, .main .notice, .main .table-wrap, .feature, .flow li, .role-card, .steps li, .trust-list li, .band, .auth-card, .voter .card, .tracker li):not(.rv-in) {
+  opacity: 0; transform: translateY(16px);
+}
+/* Never leave content hidden if the script does not start. */
+html.motion:not(.motion-ready) :is(.main .card, .main .page-head, .main .meeting-card, .main .stat, .main .question, .main .choice, .main .notice, .main .table-wrap, .feature, .flow li, .role-card, .steps li, .trust-list li, .band, .auth-card, .voter .card, .tracker li) { animation: rv-fallback 0s 3s forwards; }
+html.motion .rv-in {
+  animation: rv-in .6s calc(var(--rv-i, 0) * 70ms) cubic-bezier(.2, .8, .2, 1) backwards; /* backwards keeps hover transforms working afterwards */
+}
+@keyframes rv-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes rv-fallback { to { opacity: 1; transform: none; } }
+
+/* Hero: drifting glow, staggered headline, floating result card */
+html.motion .hero::after { animation: hero-drift 14s ease-in-out infinite alternate; }
+.hero::before { content: ''; position: absolute; inset: -40% 45% auto -25%; height: 110%; background: radial-gradient(closest-side, rgba(24, 169, 153, 0.28), transparent); pointer-events: none; }
+html.motion .hero::before { animation: hero-drift 18s ease-in-out infinite alternate-reverse; }
+@keyframes hero-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-8%, 6%) scale(1.15); } }
+html.motion .hero-inner > div:first-child > * { animation: rv-in .7s cubic-bezier(.2, .8, .2, 1) backwards; }
+html.motion .hero-inner > div:first-child > :nth-child(2) { animation-delay: .1s; }
+html.motion .hero-inner > div:first-child > :nth-child(3) { animation-delay: .2s; }
+html.motion .hero-inner > div:first-child > :nth-child(4) { animation-delay: .3s; }
+html.motion .hero-inner > div:first-child > :nth-child(n+5) { animation-delay: .4s; }
+html.motion .hero-card { animation: hero-card-in .9s .25s cubic-bezier(.2, .8, .2, 1) both, hero-float 6s 1.2s ease-in-out infinite; }
+@keyframes hero-card-in { from { opacity: 0; transform: translateX(30px) rotate(1.5deg); } to { opacity: 1; transform: none; } }
+@keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* Result bars and ballot progress fill in */
+html.motion .meter > span { transform-origin: left center; animation: bar-grow 1.2s .5s cubic-bezier(.2, .8, .2, 1) both; }
+html.motion .meter-mark { animation: rv-fallback .4s 1.4s both; opacity: 0; }
+html.motion .progress span.on { transform-origin: left center; animation: bar-grow .6s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Buttons: soft press and a light sweep on the main button */
+.btn { position: relative; overflow: hidden; }
+html.motion .btn:active { transform: scale(.97); }
+html.motion .btn:not(.light):not(.secondary):not(.ghost)::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); transform: skewX(-20deg); pointer-events: none; }
+html.motion .btn:not(.light):not(.secondary):not(.ghost):hover::after { animation: btn-sweep .7s ease; }
+@keyframes btn-sweep { to { left: 130%; } }
+
+/* Vote receipt: code pops in with a glow */
+html.motion .receipt { animation: receipt-pop .6s .2s cubic-bezier(.2, .9, .3, 1.3) both, receipt-glow 2.4s .8s ease-in-out 2; }
+@keyframes receipt-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes receipt-glow { 50% { box-shadow: 0 0 0 6px rgba(24, 169, 153, .18); border-color: var(--teal); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::before, .hero::after, .hero-card, .meter > span, .receipt, .btn::after { animation: none !important; }
+}

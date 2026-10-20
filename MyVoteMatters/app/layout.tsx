@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { Motion } from '@/components/Motion';
+
+// Turns on entrance animations before first paint, unless the visitor prefers reduced motion.
+const MOTION_INIT = "try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion')}catch(e){}";
 
 export const metadata: Metadata = {
   title: { default: 'MyVoteMatters · Secure corporate e-voting', template: '%s · MyVoteMatters' },
@@ -12,8 +16,9 @@ export const viewport: Viewport = { themeColor: '#10182f', width: 'device-width'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN">
-      <body>{children}</body>
+    <html lang="en-IN" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: MOTION_INIT }} /></head>
+      <body>{children}<Motion /></body>
     </html>
   );
 }
