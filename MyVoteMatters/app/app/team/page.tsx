@@ -43,7 +43,7 @@ export default async function Team() {
                         </ActionForm>
                         <ActionForm action={resetPassword.bind(null, m.id)} className="manage-row">
                           <label className="small h-icon" htmlFor={`pw-${m.id}`}><KeyRound size={14} aria-hidden="true" />New password</label>
-                          <input id={`pw-${m.id}`} name="password" type="text" minLength={10} required autoComplete="off" placeholder="at least 10 characters" />
+                          <input id={`pw-${m.id}`} name="password" type="text" minLength={5} required autoComplete="off" placeholder="at least 5 characters" />
                           <Submit className="btn secondary small" pendingText="Saving…">Reset password</Submit>
                         </ActionForm>
                         {m.id !== s.userId && (
@@ -74,7 +74,7 @@ export default async function Team() {
               </div>
               <div className="field">
                 <label htmlFor="password">Temporary password <span className="hint">share it with them directly</span></label>
-                <input id="password" name="password" type="text" minLength={10} required autoComplete="off" />
+                <input id="password" name="password" type="text" minLength={5} required autoComplete="off" />
               </div>
               <Submit pendingText="Adding…">Add member</Submit>
             </ActionForm>

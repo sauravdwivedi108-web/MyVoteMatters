@@ -98,7 +98,7 @@ export async function addMember(_: FormState, fd: FormData): Promise<FormState> 
     const password = String(fd.get('password') ?? '');
     if (!emailOk(email) || !name) return { error: 'Enter a name and a valid email address or username.' };
     if (!['election_admin', 'approver', 'scrutinizer', 'viewer', 'owner'].includes(role)) return { error: 'Choose a role.' };
-    if (password.length < 10) return { error: 'Set a temporary password of at least 10 characters.' };
+    if (password.length < 5) return { error: 'Set a temporary password of at least 5 characters.' };
     const hash = await hashPassword(password);
     await withTenant(await db(), s.orgId, async (tx) => {
       let { rows: [u] } = await tx.query(`SELECT id, password_hash FROM users WHERE email_normalized = $1`, [email]);
@@ -152,7 +152,7 @@ export async function resetPassword(userId: string, _: FormState, fd: FormData):
   const password = String(fd.get('password') ?? '');
   try {
     requirePermission(s, 'team');
-    if (password.length < 10) return { error: 'Use a password of at least 10 characters.' };
+    if (password.length < 5) return { error: 'Use a password of at least 5 characters.' };
     const hash = await hashPassword(password);
     await withTenant(await db(), s.orgId, async (tx) => {
       await memberFor(tx, userId);
