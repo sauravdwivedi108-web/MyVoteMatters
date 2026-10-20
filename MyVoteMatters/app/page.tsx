@@ -30,7 +30,7 @@ export default function Home() {
         <SiteNav />
         <div className="hero-inner">
           <div>
-            <AnimatedLogo size={76} loop className="hero-logo" />
+            <AnimatedLogo size={88} loop className="hero-logo" />
             <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
             <h1>Every vote recorded, weighted and audit-ready.</h1>
             <p className="lead">

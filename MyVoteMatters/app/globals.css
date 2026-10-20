@@ -442,23 +442,29 @@ svg.lucide:not([class*="arrow"]):not([class*="chevron"]):not(.lucide-plus):not(.
 
 /* ===================== Animated logo ===================== */
 .mvm-logo { display: block; flex: none; overflow: visible; }
-.mvm-logo .mvm-shield { transform-origin: 50px 55px; animation: mvm-shield-in 0.6s cubic-bezier(.2,.9,.3,1.2) both; }
-.mvm-logo .mvm-ballot { animation: mvm-ballot-out 0.7s 0.35s cubic-bezier(.25,.8,.3,1) both; }
-.mvm-logo .mvm-tick { stroke-dasharray: 1; animation: mvm-tick-draw 0.45s 0.95s ease-out both; }
-.mvm-logo .mvm-seal { transform-origin: 50px 22px; animation: mvm-seal-pop 0.55s 1.25s cubic-bezier(.2,.9,.3,1.4) both; }
-.mvm-logo .mvm-shine { animation: mvm-shine 1.1s 1.6s ease-in-out both; }
+.mvm-logo .mvm-badge { transform-origin: 50px 50px; animation: mvm-badge-in .6s cubic-bezier(.2,.9,.3,1.25) both; }
+.mvm-logo .mvm-tick { stroke-dasharray: 1; animation: mvm-tick-draw .55s .35s cubic-bezier(.5,0,.2,1) both; }
+.mvm-logo .mvm-head { transform-origin: 45px 38px; animation: mvm-head-drop .6s .8s cubic-bezier(.2,.9,.3,1.5) both; }
+.mvm-logo .mvm-slot { transform-origin: 50px 82px; animation: mvm-slot-in .4s .2s ease-out both; }
+.mvm-logo .mvm-shine { animation: mvm-shine 1s 1.3s ease-in-out both; }
 .brand:hover .mvm-logo *, .mvm-logo:hover * { animation-name: none; }
-.brand:hover .mvm-logo .mvm-shield, .mvm-logo:hover .mvm-shield { animation-name: mvm-shield-in; }
-.brand:hover .mvm-logo .mvm-ballot, .mvm-logo:hover .mvm-ballot { animation-name: mvm-ballot-out; }
+.brand:hover .mvm-logo .mvm-badge, .mvm-logo:hover .mvm-badge { animation-name: mvm-badge-in; }
 .brand:hover .mvm-logo .mvm-tick, .mvm-logo:hover .mvm-tick { animation-name: mvm-tick-draw; }
-.brand:hover .mvm-logo .mvm-seal, .mvm-logo:hover .mvm-seal { animation-name: mvm-seal-pop; }
+.brand:hover .mvm-logo .mvm-head, .mvm-logo:hover .mvm-head { animation-name: mvm-head-drop; }
+.brand:hover .mvm-logo .mvm-slot, .mvm-logo:hover .mvm-slot { animation-name: mvm-slot-in; }
 .brand:hover .mvm-logo .mvm-shine, .mvm-logo:hover .mvm-shine { animation-name: mvm-shine; }
-@keyframes mvm-shield-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
-@keyframes mvm-ballot-out { from { transform: translateY(-40px); } to { transform: translateY(0); } }
+@keyframes mvm-badge-in { from { opacity: 0; transform: scale(.6) rotate(-8deg); } to { opacity: 1; transform: none; } }
 @keyframes mvm-tick-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes mvm-seal-pop { from { opacity: 0; transform: scale(0) rotate(-120deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
-@keyframes mvm-shine { from { transform: skewX(-18deg) translateX(0); } to { transform: skewX(-18deg) translateX(190px); } }
+@keyframes mvm-head-drop { from { opacity: 0; transform: translateY(-22px) scale(.4); } to { opacity: 1; transform: none; } }
+@keyframes mvm-slot-in { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: none; } }
+@keyframes mvm-shine { from { transform: skewX(-18deg) translateX(0); } to { transform: skewX(-18deg) translateX(200px); } }
 @media (prefers-reduced-motion: reduce) { .mvm-logo * { animation: none !important; } }
+
+/* Wordmark: bigger, "Matters" in the brand gradient */
+.brand { font-size: 1.42rem; gap: 12px; letter-spacing: -0.035em; }
+.brand-accent { background: linear-gradient(90deg, #2848c7, #18a999); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero .brand-accent, .sidebar .brand-accent { background: linear-gradient(90deg, #9db4ff, #8ff0dc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (max-width: 520px) { .brand { font-size: 1.22rem; gap: 10px; } }
 
 /* ===================== Site motion ===================== */
 /* Scroll reveal: html.motion is set before paint; components/Motion.tsx adds .rv-in. */
@@ -510,13 +516,11 @@ html.motion .receipt { animation: receipt-pop .6s .2s cubic-bezier(.2, .9, .3, 1
 }
 
 /* Big looping logo on the home hero: a vote is cast every 6 seconds */
-.hero-logo { margin-bottom: 18px; filter: drop-shadow(0 10px 24px rgba(40, 72, 199, .45)); }
-.mvm-logo.mvm-loop .mvm-ballot { animation: mvm-ballot-loop 6s .35s cubic-bezier(.25,.8,.3,1) infinite both; }
-.mvm-logo.mvm-loop .mvm-tick { animation: mvm-tick-loop 6s .35s ease-out infinite both; }
-.mvm-logo.mvm-loop .mvm-seal { animation: mvm-seal-loop 6s .35s cubic-bezier(.2,.9,.3,1.4) infinite both; }
+.hero-logo { margin-bottom: 20px; filter: drop-shadow(0 12px 28px rgba(24, 169, 153, .35)); }
+.mvm-logo.mvm-loop .mvm-tick { animation: mvm-tick-loop 6s .35s cubic-bezier(.5,0,.2,1) infinite both; }
+.mvm-logo.mvm-loop .mvm-head { animation: mvm-head-loop 6s .35s cubic-bezier(.2,.9,.3,1.5) infinite both; }
 .mvm-logo.mvm-loop .mvm-shine { animation: mvm-shine-loop 6s .35s ease-in-out infinite both; }
-@keyframes mvm-ballot-loop { 0% { transform: translateY(-40px); } 12%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-40px); } }
-@keyframes mvm-tick-loop { 0%, 14% { stroke-dashoffset: 1; } 22%, 84% { stroke-dashoffset: 0; } 88%, 100% { stroke-dashoffset: 1; } }
-@keyframes mvm-seal-loop { 0%, 20% { opacity: 0; transform: scale(0) rotate(-120deg); } 29%, 86% { opacity: 1; transform: scale(1) rotate(0); } 93%, 100% { opacity: 0; transform: scale(0) rotate(90deg); } }
-@keyframes mvm-shine-loop { 0%, 30% { transform: skewX(-18deg) translateX(0); } 45%, 100% { transform: skewX(-18deg) translateX(190px); } }
+@keyframes mvm-tick-loop { 0% { stroke-dashoffset: 1; } 10%, 86% { stroke-dashoffset: 0; } 94%, 100% { stroke-dashoffset: -1; } }
+@keyframes mvm-head-loop { 0%, 8% { opacity: 0; transform: translateY(-22px) scale(.4); } 18%, 84% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: translateY(-10px) scale(.6); } }
+@keyframes mvm-shine-loop { 0%, 22% { transform: skewX(-18deg) translateX(0); } 38%, 100% { transform: skewX(-18deg) translateX(200px); } }
 @media (prefers-reduced-motion: reduce) { .mvm-logo.mvm-loop * { animation: none !important; } }
