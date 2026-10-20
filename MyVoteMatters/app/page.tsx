@@ -6,6 +6,18 @@ import {
 import { SiteNav, SiteFooter } from '@/components/SiteChrome';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
 
+const trustLeft = [
+  [Fingerprint, 'One voter ID, one vote'],
+  [Lock, 'Locked before voting starts'],
+  [EyeOff, 'No peeking while voting is open'],
+] as const;
+
+const trustRight = [
+  [History, 'Tamper-evident audit trail'],
+  [ShieldCheck, 'Passwords kept only as hashes'],
+  [Scale, 'Weighted results, full record'],
+] as const;
+
 const steps = [
   [ListChecks, 'Set the questions', 'Topics with options and full descriptions, how many choices each voter may make, and the approval threshold.'],
   [Users, 'Add the voters', 'Shareholders or creditors with their voting weight. Paste straight from Excel; each % share is calculated for you.'],
@@ -29,7 +41,15 @@ export default function Home() {
       <div className="hero">
         <SiteNav />
         <div className="hero-inner">
-          <div className="hero-logo-row"><AnimatedLogo size={140} loop className="hero-logo" /></div>
+          <div className="hero-logo-row">
+            <ul className="hero-trust left">
+              {trustLeft.map(([Icon, text]) => <li key={text}>{text}<Icon size={16} aria-hidden="true" /></li>)}
+            </ul>
+            <AnimatedLogo size={140} loop className="hero-logo" />
+            <ul className="hero-trust right">
+              {trustRight.map(([Icon, text]) => <li key={text}><Icon size={16} aria-hidden="true" />{text}</li>)}
+            </ul>
+          </div>
           <div>
             <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
             <h1>Every vote recorded, weighted and audit-ready.</h1>
