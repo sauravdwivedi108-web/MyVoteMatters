@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { SiteNav, SiteFooter } from '@/components/SiteChrome';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
+import { HeroArt } from '@/components/HeroArt';
 
 const steps = [
   [ListChecks, 'Set the questions', 'Topics with options and full descriptions, how many choices each voter may make, and the approval threshold.'],
@@ -27,48 +28,72 @@ export default function Home() {
   return (
     <>
       <div className="hero">
-        <SiteNav />
-        <div className="hero-inner">
-          <div>
-            <AnimatedLogo size={88} loop className="hero-logo" />
-            <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
-            <h1>Every vote recorded, weighted and audit-ready.</h1>
-            <p className="lead">
-              MyVoteMatters lets an administrator put questions to shareholders and creditors of a company, issue each voter a secure login,
-              and produce results with a complete, verifiable record of who voted for what.
-            </p>
-            <div className="hero-ctas">
-              <Link href="/login" className="btn"><Building2 size={18} aria-hidden="true" /> Admin login</Link>
-              <Link href="/voter" className="btn light"><UserRound size={18} aria-hidden="true" /> Voter login</Link>
-            </div>
-            <p className="small" style={{ color: '#aab3cc', marginTop: 14 }}>New organisation? <Link href="/signup" style={{ color: '#fff' }}>Create an admin account</Link></p>
-          </div>
-          <div className="hero-card" aria-label="Example result">
-            <div className="small" style={{ color: '#c9cfe3' }}>Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
-            <div className="res">
-              <div className="hero-opt">
-                <div><strong>Plan by Applicant A</strong><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
-                <div className="meter"><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
-                <div className="small muted num">78.75% of total share · 2 voters</div>
+        <div className="hero-frame">
+          <svg className="hero-blob" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="hero-grad" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" stopColor="#8f5fe8" />
+                <stop offset=".55" stopColor="#b763d6" />
+                <stop offset="1" stopColor="#f562b0" />
+              </linearGradient>
+            </defs>
+            <path d="M330 0H1000V700H790C650 610 575 500 560 360C548 250 440 235 385 170C345 120 335 55 330 0Z" fill="url(#hero-grad)" />
+          </svg>
+          <SiteNav />
+          <div className="hero-inner">
+            <div className="hero-copy">
+              <AnimatedLogo size={88} loop className="hero-logo" />
+              <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
+              <h1><span className="h1-light">Every vote recorded,</span> <span className="h1-bold">weighted and audit-ready.</span></h1>
+              <div className="hero-rule" aria-hidden="true" />
+              <p className="lead">
+                MyVoteMatters lets an administrator put questions to shareholders and creditors of a company, issue each voter a secure login,
+                and produce results with a complete, verifiable record of who voted for what.
+              </p>
+              <div className="hero-ctas">
+                <Link href="/login" className="btn pink"><Building2 size={18} aria-hidden="true" /> Admin login</Link>
+                <Link href="/voter" className="btn outline"><UserRound size={18} aria-hidden="true" /> Voter login</Link>
               </div>
-              <div className="hero-opt">
-                <div><strong>Plan by Applicant B</strong><span className="small muted">Not approved</span></div>
-                <div className="meter"><span style={{ width: '15%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
-                <div className="small muted num">15.00% of total share · 1 voter</div>
-              </div>
+              <p className="small muted" style={{ marginTop: 14 }}>New organisation? <Link href="/signup">Create an admin account</Link></p>
             </div>
-            <div className="res small hero-table">
-              <div className="hero-head"><span>Creditor</span><span>Share</span><span>Voted for</span></div>
-              <div><span>State Bank of India</span><span>56.25%</span><span>Plan A</span></div>
-              <div><span>Axis Bank</span><span>22.50%</span><span>Plan A</span></div>
-              <div><span>Edelweiss ARC</span><span>15.00%</span><span>Plan B</span></div>
-              <div className="muted"><span>Operational creditors</span><span>6.25%</span><span>Did not vote</span></div>
+            <div className="hero-visual">
+              <HeroArt />
             </div>
-            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 12, gap: 6 }}><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
-            <div className="small h-icon" style={{ color: '#8fe3d8', marginTop: 6, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
           </div>
         </div>
       </div>
+
+      <section className="section sample" aria-label="Example result">
+        <div className="sample-copy">
+          <p className="kicker">Example result</p>
+          <h2>Approval against the threshold, at a glance</h2>
+          <p className="muted">Each option shows its % of total share against the threshold, with who voted for what once voting ends.</p>
+        </div>
+        <div className="hero-card sample-card">
+          <div className="small muted">Example · 7th CoC meeting · Question 1: Which resolution plan? · needs 66% of total share</div>
+          <div className="res">
+            <div className="hero-opt">
+              <div><strong>Plan by Applicant A</strong><span className="h-icon" style={{ color: 'var(--teal-strong)', gap: 4 }}><CheckCircle2 size={16} aria-hidden="true" /> Approved</span></div>
+              <div className="meter"><span style={{ width: '78.75%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
+              <div className="small muted num">78.75% of total share · 2 voters</div>
+            </div>
+            <div className="hero-opt">
+              <div><strong>Plan by Applicant B</strong><span className="small muted">Not approved</span></div>
+              <div className="meter"><span style={{ width: '15%' }} /><i className="meter-mark" style={{ left: '66%' }} /></div>
+              <div className="small muted num">15.00% of total share · 1 voter</div>
+            </div>
+          </div>
+          <div className="res small hero-table">
+            <div className="hero-head"><span>Creditor</span><span>Share</span><span>Voted for</span></div>
+            <div><span>State Bank of India</span><span>56.25%</span><span>Plan A</span></div>
+            <div><span>Axis Bank</span><span>22.50%</span><span>Plan A</span></div>
+            <div><span>Edelweiss ARC</span><span>15.00%</span><span>Plan B</span></div>
+            <div className="muted"><span>Operational creditors</span><span>6.25%</span><span>Did not vote</span></div>
+          </div>
+          <div className="small h-icon" style={{ marginTop: 12, gap: 6 }}><Lock size={15} aria-hidden="true" /> One voter ID, one vote: a second attempt is refused.</div>
+          <div className="small h-icon" style={{ marginTop: 6, gap: 6 }}><ShieldCheck size={15} aria-hidden="true" /> Audit chain verified · 23 entries</div>
+        </div>
+      </section>
 
       <section className="section" id="how">
         <p className="kicker">How it works</p>
