@@ -484,11 +484,11 @@ html.motion .hero::after { animation: hero-drift 14s ease-in-out infinite altern
 .hero::before { content: ''; position: absolute; inset: -40% 45% auto -25%; height: 110%; background: radial-gradient(closest-side, rgba(24, 169, 153, 0.28), transparent); pointer-events: none; }
 html.motion .hero::before { animation: hero-drift 18s ease-in-out infinite alternate-reverse; }
 @keyframes hero-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-8%, 6%) scale(1.15); } }
-html.motion .hero-inner > div:first-child > * { animation: rv-in .7s cubic-bezier(.2, .8, .2, 1) backwards; }
-html.motion .hero-inner > div:first-child > :nth-child(2) { animation-delay: .1s; }
-html.motion .hero-inner > div:first-child > :nth-child(3) { animation-delay: .2s; }
-html.motion .hero-inner > div:first-child > :nth-child(4) { animation-delay: .3s; }
-html.motion .hero-inner > div:first-child > :nth-child(n+5) { animation-delay: .4s; }
+html.motion .hero-inner > div:nth-child(2) > * { animation: rv-in .7s cubic-bezier(.2, .8, .2, 1) backwards; }
+html.motion .hero-inner > div:nth-child(2) > :nth-child(2) { animation-delay: .1s; }
+html.motion .hero-inner > div:nth-child(2) > :nth-child(3) { animation-delay: .2s; }
+html.motion .hero-inner > div:nth-child(2) > :nth-child(4) { animation-delay: .3s; }
+html.motion .hero-inner > div:nth-child(2) > :nth-child(n+5) { animation-delay: .4s; }
 html.motion .hero-card { animation: hero-card-in .9s .25s cubic-bezier(.2, .8, .2, 1) both, hero-float 6s 1.2s ease-in-out infinite; }
 @keyframes hero-card-in { from { opacity: 0; transform: translateX(30px) rotate(1.5deg); } to { opacity: 1; transform: none; } }
 @keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -516,7 +516,11 @@ html.motion .receipt { animation: receipt-pop .6s .2s cubic-bezier(.2, .9, .3, 1
 }
 
 /* Big looping logo on the home hero: a vote is cast every 6 seconds */
-.hero-logo { margin-bottom: 20px; filter: drop-shadow(0 12px 28px rgba(24, 169, 153, .35)); }
+.hero-inner { grid-template-columns: 1fr; padding-top: clamp(20px, 4vw, 44px); }
+@media (min-width: 860px) { .hero-inner { grid-template-columns: 1fr 1fr; } }
+.hero-logo-row { grid-column: 1 / -1; display: flex; justify-content: center; margin-bottom: -12px; }
+.hero-logo { filter: drop-shadow(0 16px 36px rgba(24, 169, 153, .4)); }
+@media (max-width: 520px) { .hero-logo { width: 112px; height: 112px; } }
 .mvm-logo.mvm-loop .mvm-tick { animation: mvm-tick-loop 6s .35s cubic-bezier(.5,0,.2,1) infinite both; }
 .mvm-logo.mvm-loop .mvm-head { animation: mvm-head-loop 6s .35s cubic-bezier(.2,.9,.3,1.5) infinite both; }
 .mvm-logo.mvm-loop .mvm-shine { animation: mvm-shine-loop 6s .35s ease-in-out infinite both; }
