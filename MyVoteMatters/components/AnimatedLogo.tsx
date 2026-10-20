@@ -1,9 +1,10 @@
 // Animated MyVoteMatters mark, drawn after the Magnific (Seedream 4.5) logo:
 // the shield settles in, the ballot slides out of the slot, the tick draws
-// itself and the gold seal pops. Plays on load and again on hover.
-export function AnimatedLogo({ size = 34, className = '' }: { size?: number; className?: string }) {
+// itself and the gold seal pops. Plays on load and again on hover; with
+// `loop` it keeps casting a vote every few seconds.
+export function AnimatedLogo({ size = 34, loop = false, className = '' }: { size?: number; loop?: boolean; className?: string }) {
   return (
-    <svg className={`mvm-logo ${className}`} width={size} height={size * 1.1} viewBox="0 0 100 110" aria-hidden="true" focusable="false">
+    <svg className={`mvm-logo${loop ? ' mvm-loop' : ''} ${className}`} width={size} height={size * 1.1} viewBox="0 0 100 110" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="mvm-shield" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0d1630" />

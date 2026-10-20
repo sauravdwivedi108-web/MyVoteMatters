@@ -4,6 +4,7 @@ import {
   Lock, FileSpreadsheet, Scale, UserRound, Building2, Landmark, Gavel, EyeOff,
 } from 'lucide-react';
 import { SiteNav, SiteFooter } from '@/components/SiteChrome';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 const steps = [
   [ListChecks, 'Set the questions', 'Topics with options and full descriptions, how many choices each voter may make, and the approval threshold.'],
@@ -29,6 +30,7 @@ export default function Home() {
         <SiteNav />
         <div className="hero-inner">
           <div>
+            <AnimatedLogo size={76} loop className="hero-logo" />
             <p className="eyebrow"><Landmark size={14} aria-hidden="true" /> Insolvency and shareholder e-voting</p>
             <h1>Every vote recorded, weighted and audit-ready.</h1>
             <p className="lead">

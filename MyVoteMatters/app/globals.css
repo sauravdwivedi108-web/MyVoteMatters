@@ -508,3 +508,15 @@ html.motion .receipt { animation: receipt-pop .6s .2s cubic-bezier(.2, .9, .3, 1
 @media (prefers-reduced-motion: reduce) {
   .hero::before, .hero::after, .hero-card, .meter > span, .receipt, .btn::after { animation: none !important; }
 }
+
+/* Big looping logo on the home hero: a vote is cast every 6 seconds */
+.hero-logo { margin-bottom: 18px; filter: drop-shadow(0 10px 24px rgba(40, 72, 199, .45)); }
+.mvm-logo.mvm-loop .mvm-ballot { animation: mvm-ballot-loop 6s .35s cubic-bezier(.25,.8,.3,1) infinite both; }
+.mvm-logo.mvm-loop .mvm-tick { animation: mvm-tick-loop 6s .35s ease-out infinite both; }
+.mvm-logo.mvm-loop .mvm-seal { animation: mvm-seal-loop 6s .35s cubic-bezier(.2,.9,.3,1.4) infinite both; }
+.mvm-logo.mvm-loop .mvm-shine { animation: mvm-shine-loop 6s .35s ease-in-out infinite both; }
+@keyframes mvm-ballot-loop { 0% { transform: translateY(-40px); } 12%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-40px); } }
+@keyframes mvm-tick-loop { 0%, 14% { stroke-dashoffset: 1; } 22%, 84% { stroke-dashoffset: 0; } 88%, 100% { stroke-dashoffset: 1; } }
+@keyframes mvm-seal-loop { 0%, 20% { opacity: 0; transform: scale(0) rotate(-120deg); } 29%, 86% { opacity: 1; transform: scale(1) rotate(0); } 93%, 100% { opacity: 0; transform: scale(0) rotate(90deg); } }
+@keyframes mvm-shine-loop { 0%, 30% { transform: skewX(-18deg) translateX(0); } 45%, 100% { transform: skewX(-18deg) translateX(190px); } }
+@media (prefers-reduced-motion: reduce) { .mvm-logo.mvm-loop * { animation: none !important; } }
