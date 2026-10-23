@@ -39,7 +39,7 @@ const globalForPool = globalThis as unknown as { vsPool?: pg.Pool; vsReady?: Pro
 export function databaseRegion(): string | null {
   try {
     const host = new URL(connectionString ?? '').hostname;
-    return host.match(/\.((?:[a-z]+-)+\d)\./)?.[1] ?? null;
+    return host.match(/\.([a-z]{2}-[a-z]+-\d)\./)?.[1] ?? null;
   } catch { return null; }
 }
 
