@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { randomBytes, scrypt as scryptCb, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
+import { cache } from 'react';
 import { db } from './pool';
 import { withTenant } from './core/db';
 
@@ -56,25 +57,22 @@ export type Session = {
 };
 export type Role = 'owner' | 'election_admin' | 'approver' | 'scrutinizer' | 'viewer';
 
-export async function getSession(): Promise<Session | null> {
+/** Cached per request, so the layout and the page share one lookup. */
+export const getSession = cache(async (): Promise<Session | null> => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const pool = await db();
-  const row = await withTenant(pool, null, async (tx) => {
-    const { rows: [s] } = await tx.query(
-      `SELECT s.user_id, s.organization_id, u.email_normalized, u.display_name FROM sessions s JOIN users u ON u.id = s.user_id
-        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`, [tokenHash(token)]);
-    if (!s) return null;
-    const { rows } = await tx.query(`SELECT * FROM vs.user_memberships($1)`, [s.user_id]);
-    const m = rows.find((r) => r.organization_id === s.organization_id);
-    return m ? { s, m } : null;
-  });
+  const row = await withTenant(pool, null, async (tx) => (await tx.query(
+    `SELECT s.user_id, u.email_normalized, u.display_name, m.organization_id, m.organization_name, m.role
+       FROM sessions s JOIN users u ON u.id = s.user_id
+       JOIN LATERAL vs.user_memberships(s.user_id) m ON m.organization_id = s.organization_id
+      WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`, [tokenHash(token)])).rows[0]);
   if (!row) return null;
   return {
-    userId: row.s.user_id, email: row.s.email_normalized, name: row.s.display_name ?? row.s.email_normalized,
-    orgId: row.m.organization_id, orgName: row.m.organization_name, role: row.m.role,
+    userId: row.user_id, email: row.email_normalized, name: row.display_name ?? row.email_normalized,
+    orgId: row.organization_id, orgName: row.organization_name, role: row.role,
   };
-}
+});
 
 export async function requireSession(): Promise<Session> {
   const s = await getSession();

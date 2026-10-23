@@ -13,10 +13,9 @@ export async function withTenant<T>(pool: pg.Pool, organizationId: string | null
                                     role: DbRole = 'vs_app'): Promise<T> {
   const tx = await pool.connect();
   try {
-    await tx.query('BEGIN');
-    await tx.query(`SET LOCAL ROLE ${role === 'vs_tally' ? 'vs_tally' : 'vs_app'}`);
-    await tx.query(`SELECT set_config('app.org_id', $1, true)`, [organizationId ?? '']);
-    await tx.query(`SET LOCAL search_path = vs, public`);
+    // One round trip instead of four: every query waits a full trip to the database.
+    await tx.query(`BEGIN; SET LOCAL ROLE ${role === 'vs_tally' ? 'vs_tally' : 'vs_app'}; `
+      + `SELECT set_config('app.org_id', ${tx.escapeLiteral(organizationId ?? '')}, true); SET LOCAL search_path = vs, public`);
     const result = await fn(tx);
     await tx.query('COMMIT');
     return result;

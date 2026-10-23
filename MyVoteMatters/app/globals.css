@@ -477,9 +477,9 @@ html.motion :is(.main .card, .main .page-head, .main .meeting-card, .main .stat,
   opacity: 0; transform: translateY(16px);
 }
 /* Never leave content hidden if the script does not start. */
-html.motion:not(.motion-ready) :is(.main .card, .main .page-head, .main .meeting-card, .main .stat, .main .question, .main .choice, .main .notice, .main .table-wrap, .feature, .flow li, .role-card, .steps li, .trust-list li, .band, .auth-card, .voter .card, .tracker li) { animation: rv-fallback 0s 3s forwards; }
+html.motion:not(.motion-ready) :is(.main .card, .main .page-head, .main .meeting-card, .main .stat, .main .question, .main .choice, .main .notice, .main .table-wrap, .feature, .flow li, .role-card, .steps li, .trust-list li, .band, .auth-card, .voter .card, .tracker li) { animation: rv-fallback 0s .8s forwards; }
 html.motion .rv-in {
-  animation: rv-in .6s calc(var(--rv-i, 0) * 70ms) cubic-bezier(.2, .8, .2, 1) backwards; /* backwards keeps hover transforms working afterwards */
+  animation: rv-in .4s calc(var(--rv-i, 0) * 40ms) cubic-bezier(.2, .8, .2, 1) backwards; /* backwards keeps hover transforms working afterwards */
 }
 @keyframes rv-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes rv-fallback { to { opacity: 1; transform: none; } }
@@ -559,3 +559,11 @@ html.motion .hero-trust li:nth-child(3) { animation-delay: .8s; }
 @keyframes mvm-shine-loop { 0%, 32% { transform: skewX(-18deg) translateX(0); } 50%, 100% { transform: skewX(-18deg) translateX(190px); } }
 @keyframes mvm-spark-loop { 0%, 32% { opacity: 0; transform: scale(0) rotate(0); } 38% { opacity: 1; transform: scale(1.2) rotate(45deg); } 48%, 100% { opacity: 0; transform: scale(.2) rotate(90deg); } }
 @media (prefers-reduced-motion: reduce) { .mvm-logo.mvm-loop * { animation: none !important; } }
+
+/* Instant placeholder while a workspace page loads (app/app/loading.tsx). */
+.skeleton { display: grid; gap: 18px; }
+.skeleton span { display: block; border-radius: var(--radius); background: linear-gradient(90deg, var(--line) 25%, var(--canvas) 50%, var(--line) 75%); background-size: 200% 100%; animation: sk-shimmer 1.2s linear infinite; }
+.skeleton .sk-title { height: 34px; width: min(320px, 70%); }
+.skeleton .sk-card { height: 140px; }
+@keyframes sk-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton span { animation: none; } }

@@ -11,6 +11,14 @@ export const MIGRATIONS = ['000_roles.sql', '001_core.sql', '002_app.sql', '003_
  */
 export async function migrate(pool: pg.Pool, dir = path.join(process.cwd(), 'db')) {
   const c = await pool.connect();
+  // Fast path for every cold start after the first: one query, no lock.
+  try {
+    const { rows } = await c.query('SELECT name FROM public.vs_migrations');
+    const have = new Set(rows.map((r) => r.name));
+    if (MIGRATIONS.every((m) => have.has(m))) { c.release(); return; }
+  } catch {
+    // Table missing on a fresh database; fall through to the locked path.
+  }
   try {
     await c.query('SELECT pg_advisory_lock(727274)');
     await c.query('CREATE TABLE IF NOT EXISTS public.vs_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');

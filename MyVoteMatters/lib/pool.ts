@@ -44,7 +44,8 @@ export async function db(): Promise<pg.Pool> {
   if (!connectionString) throw new Error('DATABASE_URL is not set');
   if (!globalForPool.vsPool) {
     // TLS settings come from the connection string (Neon includes sslmode=require).
-    globalForPool.vsPool = new pg.Pool({ connectionString, max: 5 });
+    // Keep idle connections for a few minutes: opening a new TLS connection costs several round trips.
+    globalForPool.vsPool = new pg.Pool({ connectionString, max: 5, idleTimeoutMillis: 300_000 });
   }
   if (!globalForPool.vsReady) {
     globalForPool.vsReady = migrate(globalForPool.vsPool).catch((err) => {

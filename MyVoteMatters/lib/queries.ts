@@ -41,31 +41,36 @@ export async function getElection(s: Session, id: string): Promise<ElectionDetai
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   return withTenant(await db(), s.orgId, async (tx) => {
     await tx.query('SELECT vs.apply_schedule($1)', [id]);
+    // Election, latest ballot, credential count and latest tally in one round trip.
     const { rows: [e] } = await tx.query(
       `SELECT e.*, su.display_name AS submitted_by_name, ap.display_name AS approved_by_name,
-              t.eligible::int, t.voted::int, t.units_eligible::text, t.units_voted::text
+              t.eligible::int, t.voted::int, t.units_eligible::text, t.units_voted::text,
+              b.version AS b_version, b.definition AS b_definition, b.published AS b_published,
+              c.n AS c_n, tr.result AS tr_result, tr.result_hash AS tr_result_hash, tr.completed_at AS tr_completed_at
          FROM elections e CROSS JOIN LATERAL vs.turnout(e.id) t
          LEFT JOIN users su ON su.id = e.submitted_by LEFT JOIN users ap ON ap.id = e.approved_by
+         LEFT JOIN LATERAL (SELECT version, definition, published_at IS NOT NULL AS published FROM ballot_definitions
+                             WHERE election_id = e.id ORDER BY version DESC LIMIT 1) b ON true
+         CROSS JOIN LATERAL (SELECT count(*)::int AS n FROM voting_credentials
+                              WHERE election_id = e.id AND revoked_at IS NULL) c
+         LEFT JOIN LATERAL (SELECT result, result_hash, completed_at FROM tally_runs
+                             WHERE election_id = e.id ORDER BY completed_at DESC LIMIT 1) tr ON true
         WHERE e.id = $1`, [id]);
     if (!e) return null;
-    const { rows: [b] } = await tx.query(
-      `SELECT version, definition, published_at IS NOT NULL AS published FROM ballot_definitions
-        WHERE election_id = $1 ORDER BY version DESC LIMIT 1`, [id]);
-    const { rows: [c] } = await tx.query(
-      `SELECT count(*)::int AS n FROM voting_credentials WHERE election_id = $1 AND revoked_at IS NULL`, [id]);
+    const { b_version, b_definition, b_published, c_n, tr_result, tr_result_hash, tr_completed_at, ...election } = e;
+    const b = b_version == null ? null : { version: b_version, definition: b_definition, published: b_published };
+    const c = { n: c_n };
+    const t = tr_result_hash == null ? null : { result: tr_result, result_hash: tr_result_hash, completed_at: tr_completed_at };
     const { rows: roll } = await tx.query(
       `SELECT eligibility_ref, voting_units::text FROM voter_eligibility WHERE election_id = $1
         ORDER BY eligibility_ref LIMIT 200`, [id]);
-    const { rows: [t] } = await tx.query(
-      `SELECT result, result_hash, completed_at FROM tally_runs WHERE election_id = $1
-        ORDER BY completed_at DESC LIMIT 1`, [id]);
     const { rows: audit } = await tx.query(
       `SELECT a.action, coalesce(u.display_name, regexp_replace(a.actor_ref, '^voter:', '')) AS actor, a.event_time, a.hash, a.detail
          FROM audit_events a LEFT JOIN users u ON 'user:' || u.id = a.actor_ref
         WHERE a.resource_ref = $1 ORDER BY a.seq DESC LIMIT 200`, [`election:${id}`]);
     return {
-      ...e,
-      ballot: b ?? null,
+      ...election,
+      ballot: b,
       credentials: c.n,
       roll,
       tally: t ? { ...t.result, result_hash: t.result_hash, completed_at: t.completed_at } : null,
