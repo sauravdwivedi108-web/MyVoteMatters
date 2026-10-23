@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, hasDatabase } from '@/lib/pool';
+import { db, hasDatabase, databaseRegion } from '@/lib/pool';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,5 +13,5 @@ export async function GET() {
   const t1 = performance.now();
   await pool.query('SELECT 1');
   const roundTripMs = Math.round(performance.now() - t1);
-  return NextResponse.json({ region, roundTripMs, connectMs: ready }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ region, databaseRegion: databaseRegion(), roundTripMs, connectMs: ready }, { headers: { 'Cache-Control': 'no-store' } });
 }

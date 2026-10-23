@@ -35,6 +35,14 @@ const connectionString = findConnectionString();
 
 const globalForPool = globalThis as unknown as { vsPool?: pg.Pool; vsReady?: Promise<void> };
 
+/** Cloud region in the database host name (e.g. ap-southeast-1 for Neon), never the address itself. */
+export function databaseRegion(): string | null {
+  try {
+    const host = new URL(connectionString ?? '').hostname;
+    return host.match(/\.((?:[a-z]+-)+\d)\./)?.[1] ?? null;
+  } catch { return null; }
+}
+
 export function hasDatabase() {
   return Boolean(connectionString);
 }
